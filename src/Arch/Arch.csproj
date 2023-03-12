@@ -7,7 +7,7 @@
 
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-    <Nullable>enable</Nullable>
+    <Nullable>disable</Nullable>
     <!--<TreatWarningsAsErrors>true</TreatWarningsAsErrors>-->
 
     <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
