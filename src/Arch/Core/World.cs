@@ -4,7 +4,6 @@ using Collections.Pooled;
 using CommunityToolkit.HighPerformance;
 using JobScheduler;
 using ArrayExtensions = CommunityToolkit.HighPerformance.ArrayExtensions;
-using Component = Arch.Core.Utils.Component;
 
 namespace Arch.Core;
 
@@ -758,7 +757,7 @@ public partial class World
     /// </summary>
     /// <param name="queryDescription">The <see cref="QueryDescription"/> which specifies which <see cref="Entity"/>s will be targeted.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Set<T>(in QueryDescription queryDescription, in T value = default)
+    public void Set<T>(in QueryDescription queryDescription, in T value = default!)
     {
         var query = Query(in queryDescription);
         foreach (ref var chunk in query)
@@ -779,7 +778,7 @@ public partial class World
     /// <param name="queryDescription">The <see cref="QueryDescription"/> which specifies which <see cref="Entity"/>s will be targeted.</param>
     [SkipLocalsInit]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Add<T>(in QueryDescription queryDescription, in T component = default)
+    public void Add<T>(in QueryDescription queryDescription, in T component = default!)
     {
         // BitSet to stack/span bitset, size big enough to contain ALL registered components.
         Span<uint> stack = stackalloc uint[BitSet.RequiredLength(ComponentRegistry.Size)];
@@ -911,7 +910,7 @@ public partial class World
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="cmp">The instance, optional.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Set<T>(in Entity entity, in T cmp = default)
+    public void Set<T>(in Entity entity, in T cmp = default!)
     {
         var entityInfo = EntityInfo[entity.Id];
         entityInfo.Archetype.Set(ref entityInfo.Slot, in cmp);
