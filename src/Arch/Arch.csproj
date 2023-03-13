@@ -4,6 +4,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <LangVersion>latest</LangVersion>
     <TargetFrameworks>net7.0; net6.0; netstandard2.1</TargetFrameworks>
+    <DefineConstants>PURE_ECS</DefineConstants>
 
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
