@@ -1,6 +1,3 @@
-using Arch.Core.Extensions;
-using Arch.Core.Utils;
-
 namespace Arch.Core;
 
 #if PURE_ECS
@@ -29,6 +26,16 @@ public readonly struct Entity : IEquatable<Entity>
     /// <param name="worldId">Its world id, not used for this entity since its pure ecs.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal Entity(int id, int worldId)
+    {
+        Id = id;
+    }
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="Entity"/> struct.
+    /// </summary>
+    /// <param name="id">Its unique id.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Entity(int id)
     {
         Id = id;
     }
