@@ -1,5 +1,5 @@
+using Arch.CommandBuffer;
 using Arch.Core;
-using Arch.Core.CommandBuffer;
 using Arch.Core.Utils;
 using static NUnit.Framework.Assert;
 
@@ -16,6 +16,7 @@ public partial class CommandBufferTest
     [Test]
     public void CommandBufferSparseSet()
     {
+
         var mySet = new SparseSet();
 
         var first = mySet.Create(new Entity(0, 0));
@@ -34,7 +35,7 @@ public partial class CommandBufferTest
     public void CommandBufferForExistingEntity()
     {
         var world = World.Create();
-        var commandBuffer = new CommandBuffer(world);
+        var commandBuffer = new CommandBuffer.CommandBuffer(world);
 
         var entity = world.Create(new ComponentType[] { typeof(Transform), typeof(Rotation), typeof(int) });
         commandBuffer.Set(in entity, new Transform { X = 20, Y = 20 });
@@ -42,10 +43,10 @@ public partial class CommandBufferTest
         commandBuffer.Remove<int>(in entity);
 
         commandBuffer.Playback();
-        That(world.Get<Transform>(in entity).X, Is.EqualTo(20));
-        That(world.Get<Transform>(in entity).Y, Is.EqualTo(20));
-        IsTrue(world.Has<Ai>(in entity));
-        IsFalse(world.Has<int>(in entity));
+        That(world.Get<Transform>(entity).X, Is.EqualTo(20));
+        That(world.Get<Transform>(entity).Y, Is.EqualTo(20));
+        IsTrue(world.Has<Ai>(entity));
+        IsFalse(world.Has<int>(entity));
 
         World.Destroy(world);
     }
@@ -54,7 +55,7 @@ public partial class CommandBufferTest
     public void CommandBuffer()
     {
         var world = World.Create();
-        var commandBuffer = new CommandBuffer(world);
+        var commandBuffer = new CommandBuffer.CommandBuffer(world);
 
         var entity = commandBuffer.Create(new ComponentType[] { typeof(Transform), typeof(Rotation), typeof(int) });
         commandBuffer.Set(in entity, new Transform { X = 20, Y = 20 });
@@ -64,10 +65,10 @@ public partial class CommandBufferTest
         commandBuffer.Playback();
 
         entity = new Entity(0, 0);
-        That(world.Get<Transform>(in entity).X, Is.EqualTo(20));
-        That(world.Get<Transform>(in entity).Y, Is.EqualTo(20));
-        IsTrue(world.Has<Ai>(in entity));
-        IsFalse(world.Has<int>(in entity));
+        That(world.Get<Transform>(entity).X, Is.EqualTo(20));
+        That(world.Get<Transform>(entity).Y, Is.EqualTo(20));
+        IsTrue(world.Has<Ai>(entity));
+        IsFalse(world.Has<int>(entity));
 
         World.Destroy(world);
     }
@@ -76,7 +77,7 @@ public partial class CommandBufferTest
     public void CommandBufferCombined()
     {
         var world = World.Create();
-        var commandBuffer = new CommandBuffer(world);
+        var commandBuffer = new CommandBuffer.CommandBuffer(world);
 
         var entity = world.Create(new ComponentType[] { typeof(Transform), typeof(Rotation), typeof(int) });
         var bufferedEntity = commandBuffer.Create(new ComponentType[] { typeof(Transform), typeof(Rotation), typeof(int) });
@@ -93,15 +94,15 @@ public partial class CommandBufferTest
 
         bufferedEntity = new Entity(1, 0);
 
-        That(world.Get<Transform>(in entity).X, Is.EqualTo(20));
-        That(world.Get<Transform>(in entity).Y, Is.EqualTo(20));
-        IsTrue(world.Has<Ai>(in entity));
-        IsFalse(world.Has<int>(in entity));
+        That(world.Get<Transform>(entity).X, Is.EqualTo(20));
+        That(world.Get<Transform>(entity).Y, Is.EqualTo(20));
+        IsTrue(world.Has<Ai>(entity));
+        IsFalse(world.Has<int>(entity));
 
-        That(world.Get<Transform>(in bufferedEntity).X, Is.EqualTo(20));
-        That(world.Get<Transform>(in bufferedEntity).Y, Is.EqualTo(20));
-        IsTrue(world.Has<Ai>(in bufferedEntity));
-        IsFalse(world.Has<int>(in bufferedEntity));
+        That(world.Get<Transform>(bufferedEntity).X, Is.EqualTo(20));
+        That(world.Get<Transform>(bufferedEntity).Y, Is.EqualTo(20));
+        IsTrue(world.Has<Ai>(bufferedEntity));
+        IsFalse(world.Has<int>(bufferedEntity));
 
         World.Destroy(world);
     }

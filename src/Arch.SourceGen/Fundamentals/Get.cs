@@ -112,20 +112,7 @@ public static class GetExtensions
     public static StringBuilder AppendChunkGetFirst(this StringBuilder sb, int amount)
     {
         var generics = new StringBuilder().GenericWithoutBrackets(amount);
-
-        var indexes = new StringBuilder();
-        for (var index = 0; index <= amount; index++)
-        {
-            indexes.Append($"out var t{index}Index,");
-        }
-        indexes.Length--;
-
-        var arrays = new StringBuilder();
-        for (var index = 0; index <= amount; index++)
-        {
-            arrays.Append($"out var t{index}Array,");
-        }
-        arrays.Length--;
+        var arrays = new StringBuilder().GetChunkArrays(amount);
 
         var insertParams = new StringBuilder();
         for (var index = 0; index <= amount; index++)
@@ -140,7 +127,7 @@ public static class GetExtensions
             [Pure]
             public Components<{{generics}}> GetFirst<{{generics}}>()
             {
-                GetArray<{{generics}}>({{arrays}});
+                {{arrays}}
                 return new Components<{{generics}}>({{insertParams}});
             }
             """;
@@ -161,8 +148,8 @@ public static class GetExtensions
     public static StringBuilder AppendChunkIndexGet(this StringBuilder sb, int amount)
     {
         var generics = new StringBuilder().GenericWithoutBrackets(amount);
-        var getArrays = new StringBuilder().GetChunkArrays(amount);
         var inParams = new StringBuilder().InsertGenericParams(amount);
+        var arrays = new StringBuilder().GetChunkArrays(amount);
 
         var gets = new StringBuilder();
         for (var index = 0; index <= amount; index++)
@@ -174,9 +161,9 @@ public static class GetExtensions
             $$"""
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             [Pure]
-            public Components<{{generics}}> Get<{{generics}}>(scoped in int index)
+            public Components<{{generics}}> Get<{{generics}}>(int index)
             {
-                {{getArrays}}
+                {{arrays}}
                 {{gets}}
 
                 return new Components<{{generics}}>({{inParams}});
@@ -212,14 +199,14 @@ public static class GetExtensions
             $$"""
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             [Pure]
-            public EntityComponents<{{generics}}> GetRow<{{generics}}>(scoped in int index)
+            public EntityComponents<{{generics}}> GetRow<{{generics}}>(int index)
             {
                 {{getArrays}}
 
                 ref var entity = ref Entities[index];
                 {{gets}}
 
-                return new EntityComponents<{{generics}}>(in entity, {{inParams}});
+                return new EntityComponents<{{generics}}>(ref entity, {{inParams}});
             }
             """;
 
@@ -270,11 +257,12 @@ public static class GetExtensions
         var template =
             $$"""
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public Components<{{generics}}> Get<{{generics}}>(in Entity entity)
+            [Pure]
+            public Components<{{generics}}> Get<{{generics}}>(Entity entity)
             {
-                var entityInfo = EntityInfo[entity.Id];
-                var archetype = entityInfo.Archetype;
-                return archetype.Get<{{generics}}>(ref entityInfo.Slot);
+                var slot = EntityInfo.GetSlot(entity.Id);
+                var archetype = EntityInfo.GetArchetype(entity.Id);
+                return archetype.Get<{{generics}}>(ref slot);
             }
             """;
 
@@ -298,7 +286,8 @@ public static class GetExtensions
         var template =
             $$"""
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static Components<{{generics}}> Get<{{generics}}>(this in Entity entity)
+            [Pure]
+            public static Components<{{generics}}> Get<{{generics}}>(this Entity entity)
             {
                 var world = World.Worlds[entity.WorldId];
                 return world.Get<{{generics}}>(entity);

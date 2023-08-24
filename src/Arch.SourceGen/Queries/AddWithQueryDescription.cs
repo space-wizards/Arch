@@ -34,9 +34,12 @@ public static class AddWithQueryDescription
         var types = new StringBuilder().GenericTypeParams(amount);
 
         var setIds = new StringBuilder();
+        var addEvents = new StringBuilder();
+        var setEvents = new StringBuilder();
         for (var index = 0; index <= amount; index++)
         {
             setIds.AppendLine($"spanBitSet.SetBit(Component<T{index}>.ComponentType.Id);");
+            addEvents.AppendLine($"OnComponentAdded<T{index}>(archetype);");
         }
 
         var template =
@@ -58,8 +61,8 @@ public static class AddWithQueryDescription
                     }
 
                     // Create local bitset on the stack and set bits to get a new fitting bitset of the new archetype.
-                    var bitSet = archetype.BitSet;
-                    var spanBitSet = new SpanBitSet(bitSet.AsSpan(stack));
+                    archetype.BitSet.AsSpan(stack);
+                    var spanBitSet = new SpanBitSet(stack);
                     {{setIds}}
 
                     // Get or create new archetype.
@@ -71,32 +74,15 @@ public static class AddWithQueryDescription
                     // Get last slots before copy, for updating entityinfo later
                     var archetypeSlot = archetype.LastSlot;
                     var newArchetypeLastSlot = newArchetype.LastSlot;
-                    newArchetypeLastSlot++;
+                    Slot.Shift(ref newArchetypeLastSlot, newArchetype.EntitiesPerChunk);
+                    EntityInfo.Shift(archetype, archetypeSlot, newArchetype, newArchetypeLastSlot);
 
+                    // Copy, set and clear
                     Archetype.Copy(archetype, newArchetype);
+                    var lastSlot = newArchetype.LastSlot;
+                    newArchetype.SetRange(in lastSlot, in newArchetypeLastSlot, {{inParameters}});
+                    {{addEvents}}
                     archetype.Clear();
-                    Set(in queryDescription, {{inParameters}});
-
-                    // Update the entityInfo of all copied entities.
-                    for (var chunkIndex = archetypeSlot.ChunkIndex; chunkIndex >= 0; --chunkIndex)
-                    {
-                        ref var chunk = ref archetype.GetChunk(chunkIndex);
-                        ref var entityFirstElement = ref chunk.Entities.DangerousGetReference();
-                        for (var index = archetypeSlot.Index; index >= 0; --index)
-                        {
-                            ref readonly var entity = ref Unsafe.Add(ref entityFirstElement, index);
-
-                            // Calculate new entity slot based on its old slot.
-                            var entitySlot = new Slot(index, chunkIndex);
-                            var newSlot = Slot.Shift(entitySlot, archetype.EntitiesPerChunk, newArchetypeLastSlot, newArchetype.EntitiesPerChunk);
-
-                            // Update entity info
-                            var entityInfo = EntityInfo[entity.Id];
-                            entityInfo.Slot = newSlot;
-                            entityInfo.Archetype = newArchetype;
-                            EntityInfo[entity.Id] = entityInfo;
-                        }
-                    }
                 }
             }
             """;

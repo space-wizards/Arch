@@ -27,7 +27,7 @@ public static class SetExtensions
         var template =
             $$"""
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Set<{{generics}}>(in int index, {{parameters}})
+            public void Set<{{generics}}>(int index, {{parameters}})
             {
                 {{arrays}}
                 {{sets}}
@@ -66,6 +66,59 @@ public static class SetExtensions
         return sb.AppendLine(template);
     }
 
+    public static StringBuilder AppendArchetypeSetRanges(this StringBuilder sb, int amount)
+    {
+        for (var index = 1; index < amount; index++)
+        {
+            sb.AppendArchetypeSetRange(index);
+        }
+
+        return sb;
+    }
+
+    public static StringBuilder AppendArchetypeSetRange(this StringBuilder sb, int amount)
+    {
+        var generics = new StringBuilder().GenericWithoutBrackets(amount);
+        var parameters = new StringBuilder().GenericInDefaultParams(amount,"ComponentValue");
+        var getFirstElements = new StringBuilder().GetFirstGenericElements(amount);
+        var getComponents = new StringBuilder().GetGenericComponents(amount);
+
+        var assignComponents = new StringBuilder();
+        for (var index = 0; index <= amount; index++)
+        {
+            assignComponents.AppendLine($"t{index}Component = t{index}ComponentValue;");
+        }
+
+        var template =
+            $$"""
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal void SetRange<{{generics}}>(in Slot from, in Slot to, {{parameters}})
+            {
+                // Set the added component, start from the last slot and move down
+                for (var chunkIndex = from.ChunkIndex; chunkIndex >= to.ChunkIndex; --chunkIndex)
+                {
+                    ref var chunk = ref GetChunk(chunkIndex);
+                    {{getFirstElements}}
+
+                    // Only move within the range, depening on which chunk we are at.
+                    var isStart = chunkIndex == from.ChunkIndex;
+                    var isEnd = chunkIndex == to.ChunkIndex;
+
+                    var upper = isStart ? from.Index : chunk.Size-1;
+                    var lower = isEnd ? to.Index : 0;
+
+                    for (var entityIndex = upper; entityIndex >= lower; --entityIndex)
+                    {
+                        {{getComponents}}
+                        {{assignComponents}}
+                    }
+                }
+            }
+            """;
+
+        return sb.AppendLine(template);
+    }
+
     public static StringBuilder AppendWorldSets(this StringBuilder sb, int amount)
     {
         for (var index = 1; index < amount; index++)
@@ -82,14 +135,21 @@ public static class SetExtensions
         var parameters = new StringBuilder().GenericInParams(amount);
         var insertParams = new StringBuilder().InsertGenericInParams(amount);
 
+        var events = new StringBuilder();
+        for (var index = 0; index <= amount; index++)
+        {
+            events.AppendLine($"OnComponentSet<T{index}>(entity);");
+        }
+
         var template =
             $$"""
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Set<{{generics}}>(in Entity entity, {{parameters}})
+            public void Set<{{generics}}>(Entity entity, {{parameters}})
             {
-                var entityInfo = EntityInfo[entity.Id];
-                var archetype = entityInfo.Archetype;
-                archetype.Set<{{generics}}>(ref entityInfo.Slot, {{insertParams}});
+                var slot = EntityInfo.GetSlot(entity.Id);
+                var archetype = EntityInfo.GetArchetype(entity.Id);
+                archetype.Set<{{generics}}>(ref slot, {{insertParams}});
+                {{events}}
             }
             """;
 
@@ -115,10 +175,10 @@ public static class SetExtensions
         var template =
             $$"""
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static void Set<{{generics}}>(this in Entity entity, {{parameters}})
+            public static void Set<{{generics}}>(this Entity entity, {{parameters}})
             {
                 var world = World.Worlds[entity.WorldId];
-                world.Set<{{generics}}>(in entity, {{insertParams}});
+                world.Set<{{generics}}>(entity, {{insertParams}});
             }
             """;
 

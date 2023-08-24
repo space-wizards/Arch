@@ -1,8 +1,8 @@
+using Arch.Core;
 using Arch.Core.Utils;
 
-namespace Arch.Core.CommandBuffer;
+namespace Arch.CommandBuffer;
 
-// NOTE: Does this really need to be nested?
 /// <summary>
 ///     The <see cref="SparseEntity"/> struct
 ///    represents an <see cref="Entity"/> with its index in the <see cref="SparseSet"/>.
@@ -25,7 +25,6 @@ internal readonly struct SparseEntity
     }
 }
 
-// NOTE: Why not a generic type?
 // NOTE: Should this have a more descriptive name? `SparseArray` sounds too generic for something that's only for `ComponentType`s.
 /// <summary>
 ///     The see <see cref="SparseArray"/> class
@@ -75,7 +74,7 @@ internal class SparseArray
     ///     Gets an array of components contained by the <see cref="SparseArray"/>.
     /// </summary>
     public Array Components { get; private set; }
-
+    
     /// <summary>
     ///     Adds an item to the array.
     /// </summary>
@@ -85,30 +84,27 @@ internal class SparseArray
     {
         lock (this)
         {
-            // Resize entities
-            if (index >= Entities.Length)
+            // Skip since entity fits into array
+            if (index >= Capacity)
             {
-                var length = Entities.Length;
-                Array.Resize(ref Entities, index + 1);
-                Array.Fill(Entities, -1, length, index - length);
+                // Calculate new array size that fits the passed index
+                var amountOfMultiplications = (int)Math.Ceiling(Math.Log((index+1) / (float)Capacity, 2.0f));
+                var newLength = (int)Math.Pow(2, amountOfMultiplications) * Capacity;
+                newLength = Math.Max(Capacity, newLength+1);
+
+                // Resize entities array
+                Array.Resize(ref Entities, newLength);
+                Array.Fill(Entities, -1, Capacity, newLength-Capacity);
+
+                // Resize component array
+                var array = Array.CreateInstance(Type, newLength);
+                Components.CopyTo(array, 0);
+                Components = array;
+                Capacity = newLength;
             }
 
             Entities[index] = Size;
             Size++;
-
-            // Resize components
-            if (Size < Components.Length)
-            {
-                return;
-            }
-
-            Capacity = Capacity <= 0 ? 1 : Capacity;
-            var array = Array.CreateInstance(Type, Capacity * 2);
-
-            Components.CopyTo(array, 0);
-            Components = array;
-
-            Capacity *= 2;
         }
     }
 
@@ -169,19 +165,22 @@ internal class SparseArray
     /// </summary>
     public void Clear()
     {
+        for (var index = 0; index < Entities.Length; index++)
+        {
+            Entities[index] = -1;
+        }
         Size = 0;
     }
 }
 
 
-// NOTE: Why not a generic type?
 // NOTE: Should this have a more descriptive name? `SparseSet` sounds too generic for something that's only for `Entity`s.
 // TODO: Tight array like in the structural `SparseSet` to avoid unnecessary iterations!!
 /// <summary>
 ///     The <see cref="SparseSet"/> class
 ///     Stores a series of <see cref="SparseArray"/>'s and their associated components.
 /// </summary>
-internal class SparseSet : IDisposable
+internal class SparseSet
 {
     private readonly object _createLock = new(); // Lock for create operations
     private readonly object _setLock = new();    // Lock for set operations
@@ -233,6 +232,38 @@ internal class SparseSet : IDisposable
     public SparseArray[] Components;
 
     /// <summary>
+    ///     Ensures the capacity for registered components types.
+    ///     Resizes the existing <see cref="Components"/> array properly to fit the id in.
+    ///     <remarks>Does not ensure the capacity in terms of how many operations or components are recorded.</remarks>
+    /// </summary>
+    /// <param name="capacity">The new capacity, the id of the component which will be ensured to fit into the arrays.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void EnsureTypeCapacity(int capacity)
+    {
+        // Allocate new `SparseArray` for new component type.
+        if (capacity < Components.Length)
+        {
+            return;
+        }
+        Array.Resize(ref Components, capacity + 1);
+    }
+
+    /// <summary>
+    ///     Ensures the capacity for the <see cref="Used"/> array.
+    /// </summary>
+    /// <param name="capacity">The new capacity.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void EnsureUsedCapacity(int capacity)
+    {
+        // Resize UsedSize array.
+        if (capacity < UsedSize)
+        {
+            return;
+        }
+        Array.Resize(ref Used, UsedSize + 1);
+    }
+
+    /// <summary>
     ///     Adds an <see cref="Entity"/> to the <see cref="SparseSet"/>.
     /// </summary>
     /// <param name="entity">The <see cref="Entity"/>.</param>
@@ -251,6 +282,41 @@ internal class SparseSet : IDisposable
         }
     }
 
+    /// <summary>
+    ///     Adds an <see cref="SparseArray"/> to the <see cref="Components"/> list and updates the <see cref="Used"/> properly.
+    /// </summary>
+    /// <param name="type">The <see cref="ComponentType"/> of the <see cref="SparseArray"/>.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void AddSparseArray(ComponentType type)
+    {
+        Components[type.Id] = new SparseArray(type, type.Id);
+
+        Used[UsedSize] = type.Id;
+        UsedSize++;
+    }
+
+    /// <summary>
+    ///     Checks whether a <see cref="SparseArray"/> for a certain <see cref="ComponentType"/> exists in the <see cref="Components"/>.
+    /// </summary>
+    /// <param name="type">The <see cref="ComponentType"/> to check.</param>
+    /// <returns>True if it does, false if not.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool HasSparseArray(ComponentType type)
+    {
+        return Components[type.Id] != null;
+    }
+
+    /// <summary>
+    ///     Returns the existing <see cref="StructuralSparseArray"/> for the registered <see cref="ComponentType"/>.
+    /// </summary>
+    /// <param name="type">The <see cref="ComponentType"/>.</param>
+    /// <returns>The existing <see cref="StructuralSparseArray"/> instance.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private SparseArray GetSparseArray(ComponentType type)
+    {
+        return Components[type.Id];
+    }
+
     // NOTE: If `SparseSet` were generic, this could perhaps be an indexer (T this[int index]).
     /// <summary>
     ///     Sets a component at the index.
@@ -261,24 +327,20 @@ internal class SparseSet : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Set<T>(int index, in T component)
     {
-        var id = Component<T>.ComponentType.Id;
+        var componentType = Component<T>.ComponentType;
         lock (_setLock)
         {
-            // Allocate new `SparseArray` for new component type.
-            if (id >= Components.Length)
+            // Ensure that enough capacity for the component array exists and add it
+            EnsureTypeCapacity(componentType.Id);
+            if (!HasSparseArray(componentType))
             {
-                Array.Resize(ref Components, id + 1);
-                Components[id] = new SparseArray(typeof(T), Capacity);
-
-                Array.Resize(ref Used, UsedSize + 1);
-
-                Used[UsedSize] = id;
-                UsedSize++;
+                EnsureUsedCapacity(UsedSize+1);
+                AddSparseArray(componentType);
             }
         }
 
         // Add and set to `SparseArray`.
-        var array = Components[id];
+        var array = GetSparseArray(componentType);
         lock (array)
         {
             if (!array.Contains(index))
@@ -323,10 +385,10 @@ internal class SparseSet : IDisposable
     }
 
     /// <summary>
-    ///     Disposes the <see cref="SparseSet"/>.
+    ///     Clears the <see cref="SparseSet"/>.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Dispose()
+    public void Clear()
     {
         Count = 0;
         Entities.Clear();

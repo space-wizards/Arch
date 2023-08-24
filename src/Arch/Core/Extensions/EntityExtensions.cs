@@ -1,3 +1,5 @@
+using System.Diagnostics.Contracts;
+using Arch.Core;
 using Arch.Core.Utils;
 
 namespace Arch.Core.Extensions;
@@ -17,10 +19,11 @@ public static partial class EntityExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <returns>Its <see cref="Archetype"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Pure]
     public static Archetype GetArchetype(this in Entity entity)
     {
         var world = World.Worlds[entity.WorldId];
-        return world.GetArchetype(in entity);
+        return world.GetArchetype(entity);
     }
 
     /// <summary>
@@ -29,10 +32,11 @@ public static partial class EntityExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <returns>A reference to its <see cref="Chunk"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Pure]
     public static ref readonly Chunk GetChunk(this in Entity entity)
     {
         var world = World.Worlds[entity.WorldId];
-        return ref world.GetChunk(in entity);
+        return ref world.GetChunk(entity);
     }
 
     /// <summary>
@@ -41,10 +45,11 @@ public static partial class EntityExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <returns>Its <see cref="ComponentType"/>'s array.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Pure]
     public static ComponentType[] GetComponentTypes(this in Entity entity)
     {
         var world = World.Worlds[entity.WorldId];
-        return world.GetComponentTypes(in entity);
+        return world.GetComponentTypes(entity);
     }
 
     /// <summary>
@@ -54,10 +59,11 @@ public static partial class EntityExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <returns>A newly allocated array containing the entities components.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Pure]
     public static object[] GetAllComponents(this in Entity entity)
     {
         var world = World.Worlds[entity.WorldId];
-        return world.GetAllComponents(in entity);
+        return world.GetAllComponents(entity);
     }
 
 
@@ -67,10 +73,11 @@ public static partial class EntityExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <returns>True if it exists and is alive, otherwhise false.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Pure]
     public static bool IsAlive(this in Entity entity)
     {
         var world = World.Worlds[entity.WorldId];
-        return world.IsAlive(in entity);
+        return world.IsAlive(entity);
     }
 
     /// <summary>
@@ -80,10 +87,11 @@ public static partial class EntityExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <returns>Its version.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Pure]
     public static int Version(this in Entity entity)
     {
         var world = World.Worlds[entity.WorldId];
-        return world.Version(in entity);
+        return world.Version(entity);
     }
 
     /// <summary>
@@ -92,10 +100,11 @@ public static partial class EntityExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <returns>Its <see cref="EntityReference"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Pure]
     public static EntityReference Reference(this in Entity entity)
     {
         var world = World.Worlds[entity.WorldId];
-        return world.Reference(in entity);
+        return world.Reference(entity);
     }
 
     /// <summary>
@@ -105,10 +114,10 @@ public static partial class EntityExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="cmp">The instance, optional.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Set<T>(this in Entity entity, in T component)
+    public static void Set<T>(this in Entity entity, in T component = default)
     {
         var world = World.Worlds[entity.WorldId];
-        world.Set(in entity, in component);
+        world.Set(entity, in component);
     }
 
     /// <summary>
@@ -118,10 +127,11 @@ public static partial class EntityExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <returns>True if it has the desired component, otherwhise false.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Pure]
     public static bool Has<T>(this in Entity entity)
     {
         var world = World.Worlds[entity.WorldId];
-        return world.Has<T>(in entity);
+        return world.Has<T>(entity);
     }
 
     /// <summary>
@@ -131,6 +141,7 @@ public static partial class EntityExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <returns>A reference to the component.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Pure]
     public static ref T Get<T>(this in Entity entity)
     {
         var world = World.Worlds[entity.WorldId];
@@ -146,10 +157,11 @@ public static partial class EntityExtensions
     /// <param name="component">The found component.</param>
     /// <returns>True if it exists, otherwhise false.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Pure]
     public static bool TryGet<T>(this in Entity entity, out T component)
     {
         var world = World.Worlds[entity.WorldId];
-        return world.TryGet(in entity, out component);
+        return world.TryGet(entity, out component);
     }
 
     /// <summary>
@@ -160,10 +172,25 @@ public static partial class EntityExtensions
     /// <param name="exists">True if it exists, oterhwhise false.</param>
     /// <returns>A reference to the component.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Pure]
     public static ref T TryGetRef<T>(this in Entity entity, out bool exists)
     {
         var world = World.Worlds[entity.WorldId];
-        return ref world.TryGetRef<T>(in entity, out exists);
+        return ref world.TryGetRef<T>(entity, out exists);
+    }
+
+    /// <summary>
+    ///    Ensures the existance of an component on an <see cref="Entity"/>.
+    /// </summary>
+    /// <typeparam name="T">The component type.</typeparam>
+    /// <param name="entity">The <see cref="Entity"/>.</param>
+    /// <param name="cmp">The component value used if its being added.</param>
+    /// <returns>A reference to the component.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref T AddOrGet<T>(this in Entity entity, T cmp = default)
+    {
+        var world = World.Worlds[entity.WorldId];
+        return ref world.AddOrGet(entity, cmp);
     }
 
     /// <summary>
@@ -176,7 +203,7 @@ public static partial class EntityExtensions
     public static void Add<T>(this in Entity entity, in T cmp = default)
     {
         var world = World.Worlds[entity.WorldId];
-        world.Add(in entity, cmp);
+        world.Add(entity, cmp);
     }
 
     /// <summary>
@@ -188,7 +215,7 @@ public static partial class EntityExtensions
     public static void Remove<T>(this in Entity entity)
     {
         var world = World.Worlds[entity.WorldId];
-        world.Remove<T>(in entity);
+        world.Remove<T>(entity);
     }
 #endif
 }
@@ -208,7 +235,7 @@ public static partial class EntityExtensions
     public static void Set(this in Entity entity, object cmp)
     {
         var world = World.Worlds[entity.WorldId];
-        world.Set(in entity, cmp);
+        world.Set(entity, cmp);
     }
 
     /// <summary>
@@ -220,7 +247,7 @@ public static partial class EntityExtensions
     public static void SetRange(this in Entity entity, params object[] components)
     {
         var world = World.Worlds[entity.WorldId];
-        world.SetRange(in entity, components);
+        world.SetRange(entity, components);
     }
 
     /// <summary>
@@ -230,10 +257,11 @@ public static partial class EntityExtensions
     /// <param name="type">The component <see cref="ComponentType"/>.</param>
     /// <returns>True if it has the desired component, otherwhise false.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Pure]
     public static bool Has(this in Entity entity, ComponentType type)
     {
         var world = World.Worlds[entity.WorldId];
-        return world.Has(in entity, type);
+        return world.Has(entity, type);
     }
 
     /// <summary>
@@ -243,10 +271,11 @@ public static partial class EntityExtensions
     /// <param name="types">The component <see cref="ComponentType"/>.</param>
     /// <returns>True if it has the desired component, otherwhise false.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Pure]
     public static bool HasRange(this in Entity entity, params ComponentType[] types)
     {
         var world = World.Worlds[entity.WorldId];
-        return world.HasRange(in entity, types);
+        return world.HasRange(entity, types);
     }
 
     /// <summary>
@@ -256,10 +285,11 @@ public static partial class EntityExtensions
     /// <param name="type">The component <see cref="ComponentType"/>.</param>
     /// <returns>A reference to the component.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Pure]
     public static object Get(this in Entity entity, ComponentType type)
     {
         var world = World.Worlds[entity.WorldId];
-        return world.Get(in entity, type);
+        return world.Get(entity, type);
     }
 
     /// <summary>
@@ -269,12 +299,14 @@ public static partial class EntityExtensions
     /// <param name="types">The component <see cref="ComponentType"/>.</param>
     /// <returns>A reference to the component.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Pure]
     public static object[] GetRange(this in Entity entity, params ComponentType[] types)
     {
         var world = World.Worlds[entity.WorldId];
-        return world.GetRange(in entity, types);
+        return world.GetRange(entity, types);
     }
 
+    // ReSharper disable once PureAttributeOnVoidMethod
     /// <summary>
     ///     Returns an array of components of an <see cref="Entity"/>.
     /// </summary>
@@ -283,10 +315,11 @@ public static partial class EntityExtensions
     /// <param name="components">A <see cref="IList{T}"/> where the components are put it.</param>
     /// <returns>A reference to the component.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Pure]
     public static void GetRange(this in Entity entity, ComponentType[] types, IList<object> components)
     {
         var world = World.Worlds[entity.WorldId];
-        world.GetRange(in entity, types, components);
+        world.GetRange(entity, types, components);
     }
 
     /// <summary>
@@ -298,10 +331,11 @@ public static partial class EntityExtensions
     /// <param name="component">The found component.</param>
     /// <returns>True if it exists, otherwhise false.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Pure]
     public static bool TryGet(this in Entity entity, ComponentType type, out object component)
     {
         var world = World.Worlds[entity.WorldId];
-        return world.TryGet(in entity, type, out component);
+        return world.TryGet(entity, type, out component);
     }
 
     /// <summary>
@@ -314,7 +348,7 @@ public static partial class EntityExtensions
     public static void Add(this in Entity entity, in object cmp)
     {
         var world = World.Worlds[entity.WorldId];
-        world.Add(in entity, cmp);
+        world.Add(entity, cmp);
     }
 
     /// <summary>
@@ -327,7 +361,7 @@ public static partial class EntityExtensions
     public static void AddRange(this in Entity entity, params object[] components)
     {
         var world = World.Worlds[entity.WorldId];
-        world.AddRange(in entity, components);
+        world.AddRange(entity, components);
     }
 
     /// <summary>
@@ -340,7 +374,7 @@ public static partial class EntityExtensions
     public static void AddRange(this in Entity entity, IList<ComponentType> components)
     {
         var world = World.Worlds[entity.WorldId];
-        world.AddRange(in entity, components);
+        world.AddRange(entity, components);
     }
 
 
@@ -354,7 +388,7 @@ public static partial class EntityExtensions
     public static void RemoveRange(this in Entity entity, params ComponentType[] types)
     {
         var world = World.Worlds[entity.WorldId];
-        world.RemoveRange(in entity, types);
+        world.RemoveRange(entity, types);
     }
 
     /// <summary>
@@ -367,7 +401,7 @@ public static partial class EntityExtensions
     public static void RemoveRange(this in Entity entity, IList<ComponentType> types)
     {
         var world = World.Worlds[entity.WorldId];
-        world.RemoveRange(in entity, types);
+        world.RemoveRange(entity, types);
     }
 
 #endif

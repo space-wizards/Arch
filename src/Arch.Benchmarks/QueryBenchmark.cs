@@ -1,17 +1,17 @@
 using Arch.Core;
 using Arch.Core.Utils;
+using Arch.Core.Extensions;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Arch.Benchmarks;
 
 [HtmlExporter]
 [MemoryDiagnoser]
-[HardwareCounters(HardwareCounter.CacheMisses)]
+//[HardwareCounters(HardwareCounter.CacheMisses)]
 public class QueryBenchmark
 {
     [Params(10000, 100000, 1000000)] public int Amount;
 
-    private readonly JobScheduler.JobScheduler? _jobScheduler;
     private static readonly ComponentType[] _group = { typeof(Transform), typeof(Velocity) };
     private readonly QueryDescription _queryDescription = new() { All = _group };
 
@@ -20,31 +20,22 @@ public class QueryBenchmark
     [GlobalSetup]
     public void Setup()
     {
-        // _jobScheduler = new JobScheduler.JobScheduler("Arch");
-
         _world = World.Create();
         _world.Reserve(_group, Amount);
 
         for (var index = 0; index < Amount; index++)
         {
             var entity = _world.Create(_group);
-            _world.Set(in entity, new Transform { X = 0, Y = 0 }, new Velocity { X = 1, Y = 1 });
+            _world.Set(entity, new Transform { X = 0, Y = 0 }, new Velocity { X = 1, Y = 1 });
         }
     }
-
-    [GlobalCleanup]
-    public void Cleanup()
-    {
-        //_jobScheduler.Dispose();
-    }
-
 
     [Benchmark]
     public void WorldEntityQuery()
     {
         _world.Query(in _queryDescription, static (in Entity entity) =>
         {
-            var refs = _world.Get<Transform, Velocity>(in entity);
+            var refs = _world.Get<Transform, Velocity>(entity);
 
             refs.t0.X += refs.t1.X;
             refs.t0.Y += refs.t1.Y;
@@ -64,7 +55,7 @@ public class QueryBenchmark
         });
     }
 #endif
-
+/*
     [Benchmark]
     public void Query()
     {
@@ -135,5 +126,5 @@ public class QueryBenchmark
             t.X += v.X;
             t.Y += v.Y;
         }
-    }
+    }*/
 }

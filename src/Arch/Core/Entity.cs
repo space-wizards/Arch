@@ -1,4 +1,10 @@
+#if !PURE_ECS
+using Arch.Core.Extensions;
+using Arch.Core.Utils;
+#endif
+
 namespace Arch.Core;
+
 
 #if PURE_ECS
 
@@ -7,12 +13,12 @@ namespace Arch.Core;
 ///     represents a general-purpose object and can be assigned a set of components that act as data.
 /// </summary>
 [SkipLocalsInit]
-public readonly struct Entity : IEquatable<Entity>
+public readonly struct Entity : IEquatable<Entity>, IComparable<Entity>
 {
     /// <summary>
     ///     Its Id, unique in its <see cref="World"/>.
     /// </summary>
-    public readonly int Id;
+    public readonly int Id = -1;
 
     /// <summary>
     ///     A null entity, used for comparison.
@@ -26,16 +32,6 @@ public readonly struct Entity : IEquatable<Entity>
     /// <param name="worldId">Its world id, not used for this entity since its pure ecs.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal Entity(int id, int worldId)
-    {
-        Id = id;
-    }
-
-    /// <summary>
-    ///     Initializes a new instance of the <see cref="Entity"/> struct.
-    /// </summary>
-    /// <param name="id">Its unique id.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Entity(int id)
     {
         Id = id;
     }
@@ -57,9 +53,21 @@ public readonly struct Entity : IEquatable<Entity>
     /// <param name="obj">The other <see cref="Entity"/> object.</param>
     /// <returns>True if equal, false if not.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
         return obj is Entity other && Equals(other);
+    }
+
+    /// <summary>
+    ///     Compares this <see cref="Entity"/> instace to another one for sorting and ordering.
+    ///     <remarks>Orders them by id. Ascending.</remarks>
+    /// </summary>
+    /// <param name="other">The other <see cref="Entity"/>.</param>
+    /// <returns>A int indicating their order.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public int CompareTo(Entity other)
+    {
+        return Id.CompareTo(other.Id);
     }
 
     /// <summary>
@@ -119,9 +127,8 @@ public readonly struct Entity : IEquatable<Entity>
 /// </summary>
 [DebuggerTypeProxy(typeof(EntityDebugView))]
 [SkipLocalsInit]
-public readonly struct Entity : IEquatable<Entity>
+public readonly struct Entity : IEquatable<Entity>, IComparable<Entity>
 {
-
     /// <summary>
     ///      Its Id, unique in its <see cref="World"/>.
     /// </summary>
@@ -136,6 +143,15 @@ public readonly struct Entity : IEquatable<Entity>
     ///     A null <see cref="Entity"/> used for comparison.
     /// </summary>
     public static Entity Null = new(-1, 0);
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="Entity"/> struct with default values.
+    /// </summary>
+    public Entity()
+    {
+        Id = -1;
+        WorldId = 0;
+    }
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="Entity"/> struct.
@@ -169,6 +185,19 @@ public readonly struct Entity : IEquatable<Entity>
     public override bool Equals(object obj)
     {
         return obj is Entity other && Equals(other);
+    }
+
+
+    /// <summary>
+    ///     Compares this <see cref="Entity"/> instace to another one for sorting and ordering.
+    ///     <remarks>Orders them by id and world. Ascending.</remarks>
+    /// </summary>
+    /// <param name="other">The other <see cref="Entity"/>.</param>
+    /// <returns>A int indicating their order.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public int CompareTo(Entity other)
+    {
+        return WorldId != other.WorldId ? WorldId.CompareTo(other.WorldId) : Id.CompareTo(other.Id);
     }
 
     /// <summary>
@@ -218,7 +247,7 @@ public readonly struct Entity : IEquatable<Entity>
     /// <returns>Its string.</returns>
     public override string ToString()
     {
-        return $"{nameof(Id)}: {Id}, {nameof(WorldId)}: {WorldId}";
+        return $"Entity = {{ {nameof(Id)} = {Id}, {nameof(WorldId)} = {WorldId} }}";
     }
 }
 #endif
@@ -275,7 +304,12 @@ public readonly struct EntityReference
     /// <returns>True if its alive, otherwhise false.</returns>
     public bool IsAlive(World world)
     {
-        var reference = world.Reference(in Entity);
+        if (this == Null)
+        {
+            return false;
+        }
+
+        var reference = world.Reference(Entity);
         return this == reference;
     }
 #else
@@ -285,6 +319,11 @@ public readonly struct EntityReference
     /// <returns>True if its alive, otherwhise false.</returns>
     public bool IsAlive()
     {
+        if (this == Null)
+        {
+            return false;
+        }
+
         var reference = Entity.Reference();
         return this == reference;
     }
@@ -348,5 +387,28 @@ public readonly struct EntityReference
     public static bool operator !=(EntityReference left, EntityReference right)
     {
         return !left.Equals(right);
+    }
+
+    /// <summary>
+    ///     Implicitly converts an <see cref="EntityReference"/> into the
+    ///     <see cref="Entity"/> that it is referencing.
+    /// </summary>
+    /// <param name="reference">The <see cref="EntityReference"/> to convert.</param>
+    /// <returns>
+    ///     The <see cref="Entity"/> referenced by this <see cref="EntityReference"/>.
+    /// </returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator Entity(EntityReference reference)
+    {
+        return reference.Entity;
+    }
+
+    /// <summary>
+    ///     Converts this <see cref="EntityReference"/> to a string.
+    /// </summary>
+    /// <returns>Its string.</returns>
+    public override string ToString()
+    {
+        return $"EntityReference = {{ {nameof(Entity)} = {Entity}, {nameof(Version)} = {Version} }}";
     }
 }

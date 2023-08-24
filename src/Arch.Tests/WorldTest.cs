@@ -1,10 +1,16 @@
+using System.Text;
 using Arch.Core;
 using Arch.Core.Extensions;
+using Arch.Core.Extensions.Dangerous;
 using Arch.Core.Utils;
 using static NUnit.Framework.Assert;
 
 namespace Arch.Tests;
 
+/// <summary>
+///     The <see cref="WorldTest"/> class
+///     tests basic <see cref="World"/> operations.
+/// </summary>
 [TestFixture]
 public partial class WorldTest
 {
@@ -17,6 +23,10 @@ public partial class WorldTest
     public void Setup()
     {
         _world = World.Create();
+/*
+        Entity entity = default;
+        EntityReference entityReference = default;
+        _world.Create();*/
 
         for (var index = 0; index < 10000; index++)
         {
@@ -35,6 +45,22 @@ public partial class WorldTest
         World.Destroy(_world);
     }
 
+    /// <summary>
+    ///     Checks if the <see cref="World"/> is being recycled correctly.
+    /// </summary>
+    [Test]
+    public void WorldRecycle()
+    {
+        var firstWorld = World.Create();
+        World.Destroy(firstWorld);
+
+        var secondWorld = World.Create();
+        That(secondWorld.Id, Is.EqualTo(firstWorld.Id));
+    }
+
+    /// <summary>
+    ///     Checks if the <see cref="World"/> creates <see cref="Entity"/> correctly.
+    /// </summary>
     [Test]
     public void Create()
     {
@@ -42,22 +68,28 @@ public partial class WorldTest
         var entity = _world.Create(_entityGroup);
 
         That(_world.Size, Is.EqualTo(size + 1));
-        True(_world.IsAlive(in entity));
+        True(_world.IsAlive(entity));
     }
 
+    /// <summary>
+    ///     Checks if the <see cref="World"/> destroys <see cref="Entity"/> correctly.
+    /// </summary>
     [Test]
     public void Destroy()
     {
         var worldSizeBefore = _world.Size;
         var entity = _world.Create(_entityGroup);
         var worldSizeAfter = _world.Size;
-        _world.Destroy(in entity);
+        _world.Destroy(entity);
 
         That(_world.Size, Is.EqualTo(worldSizeBefore));
         Less(worldSizeBefore, worldSizeAfter);
-        False(_world.IsAlive(in entity));
+        False(_world.IsAlive(entity));
     }
 
+    /// <summary>
+    ///     Checks if the <see cref="World"/> is capable of destroying all <see cref="Entity"/> correctly.
+    /// </summary>
     [Test]
     public void DestroyAll()
     {
@@ -69,7 +101,7 @@ public partial class WorldTest
         for (var i = 0; i < entities.Count; i++)
         {
             var entity = entities[i];
-            _world.Destroy(in entity);
+            _world.Destroy(entity);
         }
 
         That(_world.Size, Is.EqualTo(0));
@@ -77,6 +109,9 @@ public partial class WorldTest
         That(_world.Archetypes[1].Size, Is.EqualTo(1));
     }
 
+    /// <summary>
+    ///     Checks if the <see cref="World"/> recycles destroyed <see cref="Entity"/> correctly.
+    /// </summary>
     [Test]
     public void Recycle()
     {
@@ -84,15 +119,18 @@ public partial class WorldTest
 
         // Destroy & create new entity to see if it was recycled
         var entity = localWorld.Create(_entityGroup);
-        localWorld.Destroy(in entity);
+        localWorld.Destroy(entity);
         var recycledEntity = localWorld.Create(_entityGroup);
         var newEntity = localWorld.Create(_entityGroup);
 
         That(recycledEntity.Id, Is.EqualTo(entity.Id));           // Id was recycled
-        That(localWorld.Version(recycledEntity), Is.EqualTo(1));  // Version was increased
+        That(localWorld.Version(recycledEntity), Is.EqualTo(2));  // Version was increased
         That(newEntity.Id, Is.Not.EqualTo(recycledEntity.Id));
     }
 
+    /// <summary>
+    ///     Checks if the <see cref="World"/> references <see cref="Entity"/> with <see cref="EntityReference"/> correctly.
+    /// </summary>
     [Test]
     public void Reference()
     {
@@ -117,15 +155,28 @@ public partial class WorldTest
 
         // Check if reference takes care of wrong version
         That(recycledReference != otherReference, Is.EqualTo(true));
-        That(otherReference.IsAlive, Is.EqualTo(false));
+#if PURE_ECS
+        That(otherReference.IsAlive(localWorld), Is.EqualTo(false));
+#else
+        That(otherReference.IsAlive(), Is.EqualTo(false));
+#endif
 
         // Entity reference null is NOT alive.
         EntityReference cons = new EntityReference{};
         EntityReference refs = EntityReference.Null;
-        That(refs.IsAlive, Is.EqualTo(false));
-        That(cons.IsAlive, Is.EqualTo(false));
+
+#if PURE_ECS
+        That(refs.IsAlive(localWorld), Is.EqualTo(false));
+        That(cons.IsAlive(localWorld), Is.EqualTo(false));
+#else
+        That(refs.IsAlive(), Is.EqualTo(false));
+        That(cons.IsAlive(), Is.EqualTo(false));
+#endif
     }
 
+    /// <summary>
+    ///     Checks if the <see cref="World"/> adjusts its capacity when creating <see cref="Entity"/>s correctly.
+    /// </summary>
     [Test]
     public void CapacityTest()
     {
@@ -147,6 +198,9 @@ public partial class WorldTest
         That(after, Is.EqualTo(before));
     }
 
+    /// <summary>
+    ///     Checks if the <see cref="World"/> reserves memory for <see cref="Entity"/>s correctly.
+    /// </summary>
     [Test]
     public void Reserve()
     {
@@ -164,6 +218,67 @@ public partial class WorldTest
         That(_world.Capacity, Is.EqualTo(beforeCapacity + 10000));
     }
 
+    /// <summary>
+    ///     Checks if the <see cref="World"/> trims its content correctly.
+    /// </summary>
+    [Test]
+    public void TrimExcess()
+    {
+        // Fill world
+        var amount = 10000;
+        using var world = World.Create();
+        for (int index = 0; index < amount; index++)
+        {
+            world.Create<HeavyComponent>();
+        }
+
+        // Destroy half of the world entities
+        var counter = 0;
+        var query = new QueryDescription().WithAll<HeavyComponent>();
+        world.Query(in query, (in Entity entity) =>
+        {
+            if (counter < amount - 1)
+            {
+                world.Destroy(entity);
+            }
+            counter++;
+        });
+
+        // Trim
+        world.TrimExcess();
+
+        var archetype = world.Archetypes[0];
+        That(world.Size, Is.EqualTo(1));
+        That(world.Capacity, Is.EqualTo(archetype.EntitiesPerChunk));
+        That(archetype.Size, Is.EqualTo(1));
+        That(archetype.Capacity, Is.EqualTo(1));
+    }
+
+    /// <summary>
+    ///     Checks if the <see cref="World"/> clears itself correctly.
+    /// </summary>
+    [Test]
+    public void Clear()
+    {
+        // Fill world
+        var amount = 1000;
+        using var world = World.Create();
+
+        for (int index = 0; index < amount; index++)
+        {
+            world.Create<int>();
+        }
+
+        // Trim
+        world.Clear();
+
+        That(world.Size, Is.EqualTo(0));
+        That(world.Capacity, Is.EqualTo(0));
+    }
+
+    /// <summary>
+    ///     Checks if the <see cref="World"/> creates different <see cref="Entity"/> with different <see cref="Archetype"/>s correctly.
+    /// </summary>
     [Test]
     public void MultipleArchetypesTest()
     {
@@ -173,9 +288,12 @@ public partial class WorldTest
         var entity1 = _world.Create(archTypes1);
         var entity2 = _world.Create(archTypes2);
 
-        That(_world.GetArchetype(in entity2), Is.EqualTo(_world.GetArchetype(in entity1)));
+        That(_world.GetArchetype(entity2), Is.EqualTo(_world.GetArchetype(entity1)));
     }
 
+    /// <summary>
+    ///     Checks if the <see cref="World"/> gets <see cref="Entity"/>s correctly.
+    /// </summary>
     [Test]
     public void GetEntitesTest()
     {
@@ -201,6 +319,9 @@ public partial class WorldTest
         That(entites.Count, Is.EqualTo(0));
     }
 
+    /// <summary>
+    ///     Checks if the <see cref="World"/> counts <see cref="Entity"/> correctly.
+    /// </summary>
     [Test]
     public void CountEntitiesTest()
     {
@@ -225,6 +346,9 @@ public partial class WorldTest
 public partial class WorldTest
 {
 
+    /// <summary>
+    ///     Checks if the <see cref="World"/> bulk set by using a <see cref="QueryDescription"/> works correctly.
+    /// </summary>
     [Test]
     public void SetByQueryDescription()
     {
@@ -238,6 +362,9 @@ public partial class WorldTest
         });
     }
 
+    /// <summary>
+    ///     Checks if the <see cref="World"/> bulk destroy by using a <see cref="QueryDescription"/> works correctly.
+    /// </summary>
     [Test]
     public void DestroyByQueryDescription()
     {
@@ -253,6 +380,9 @@ public partial class WorldTest
         That(world.Size, Is.EqualTo(0));
     }
 
+    /// <summary>
+    ///     Checks if the <see cref="World"/> bulk add by using a <see cref="QueryDescription"/> works correctly.
+    /// </summary>
     [Test]
     public void AddByQueryDescription()
     {
@@ -270,6 +400,48 @@ public partial class WorldTest
         That(world.CountEntities(in withoutAIQueryDesc), Is.EqualTo(0));
     }
 
+    /// <summary>
+    ///     Checks if the <see cref="World"/> bulk add by using a <see cref="QueryDescription"/> works correctly and sets the value correctly too.
+    /// </summary>
+    [Test]
+    public void AddByQueryDescriptionValue()
+    {
+        var withIntQueryDesc = new QueryDescription().WithAll<int>();
+        var withoutIntQueryDesc = new QueryDescription().WithNone<int>();
+
+        using var world = World.Create();
+        for (int index = 0; index < 1000; index++)
+        {
+            world.Create(_entityGroup);
+        }
+
+        // Create entities with int
+        for (int index = 0; index < 1000; index++)
+        {
+            var entity = world.Create(_entityGroup);
+            world.Add(entity,10);
+        }
+
+        // Add int to all entities without int
+        world.Add(in withoutIntQueryDesc, 100);
+
+        var previousCounter = 0;
+        var counter = 0;
+        world.Query(in withIntQueryDesc, (ref int i) =>
+        {
+            if (i == 10) previousCounter++;
+            if (i == 100) counter++;
+        });
+
+        That(world.CountEntities(in withIntQueryDesc), Is.EqualTo(2000));
+        That(world.CountEntities(in withoutIntQueryDesc), Is.EqualTo(0));
+        That(previousCounter, Is.EqualTo(1000));
+        That(counter, Is.EqualTo(1000));
+    }
+
+    /// <summary>
+    ///     Checks if the <see cref="World"/> bulk remove by using a <see cref="QueryDescription"/> works correctly.
+    /// </summary>
     [Test]
     public void RemoveByQueryDescription()
     {
@@ -288,50 +460,58 @@ public partial class WorldTest
     }
 }
 
-
 // Get, Set, Has, Remove, Add
 public partial class WorldTest
 {
 
+    /// <summary>
+    ///     Checks if the <see cref="World"/>s set get and has operations on <see cref="Entity"/>s works correctly.
+    /// </summary>
     [Test]
     public void SetGetAndHas()
     {
 
         var entity = _world.Create(_entityGroup);
-        True(_world.Has<Transform>(in entity));
+        True(_world.Has<Transform>(entity));
 
         _world.Set(entity, new Transform { X = 10, Y = 10 });
-        ref var transform = ref _world.Get<Transform>(in entity);
+        ref var transform = ref _world.Get<Transform>(entity);
 
         That(transform.X, Is.EqualTo(10));
         That(transform.Y, Is.EqualTo(10));
     }
 
+    /// <summary>
+    ///     Checks if the <see cref="World"/>s remove operations on <see cref="Entity"/>s works correctly.
+    /// </summary>
     [Test]
     public void Remove()
     {
 
         var entity = _world.Create(_entityGroup);
         var entity2 = _world.Create(_entityGroup);
-        _world.Remove<Transform>(in entity);
-        _world.Remove<Transform>(in entity2);
+        _world.Remove<Transform>(entity);
+        _world.Remove<Transform>(entity2);
 
-        That(_world.GetArchetype(in entity2), Is.EqualTo(_world.GetArchetype(in entity)));
-        That(_world.GetArchetype(in entity).Size, Is.EqualTo(1));
-        That(_world.GetArchetype(in entity).Chunks[0].Size, Is.EqualTo(2));
+        That(_world.GetArchetype(entity2), Is.EqualTo(_world.GetArchetype(entity)));
+        That(_world.GetArchetype(entity).Size, Is.EqualTo(1));
+        That(_world.GetArchetype(entity).Chunks[0].Size, Is.EqualTo(2));
     }
 
+    /// <summary>
+    ///     Checks if the <see cref="World"/>s add operations on <see cref="Entity"/>s works correctly.
+    /// </summary>
     [Test]
     public void Add()
     {
         var entity = _world.Create(_entityGroup);
         var entity2 = _world.Create(_entityGroup);
-        _world.Add<Ai>(in entity);
-        _world.Add<Ai>(in entity2);
+        _world.Add<Ai>(entity);
+        _world.Add<Ai>(entity2);
 
         _world.TryGetArchetype(_entityAiGroup, out var arch);
-        That(_world.GetArchetype(in entity2), Is.EqualTo(_world.GetArchetype(in entity)));
-        That(arch, Is.EqualTo(_world.GetArchetype(in entity)));
+        That(_world.GetArchetype(entity2), Is.EqualTo(_world.GetArchetype(entity)));
+        That(arch, Is.EqualTo(_world.GetArchetype(entity)));
     }
 }
 
@@ -340,43 +520,52 @@ public partial class WorldTest
 public partial class WorldTest
 {
 
+    /// <summary>
+    ///     Checks if the <see cref="World"/>s non generic set get and has operations on <see cref="Entity"/>s works correctly.
+    /// </summary>
     [Test]
     public void SetGetAndHas_NonGeneric()
     {
         var entity = _world.Create(_entityGroup);
-        True(_world.Has(in entity, typeof(Transform)));
+        True(_world.Has(entity, typeof(Transform)));
 
         _world.Set(entity, (object)new Transform { X = 10, Y = 10 });
-        var transform = (Transform)_world.Get(in entity, typeof(Transform));
+        var transform = (Transform)_world.Get(entity, typeof(Transform));
 
         That(transform.X, Is.EqualTo(10));
         That(transform.Y, Is.EqualTo(10));
     }
 
+    /// <summary>
+    ///     Checks if the <see cref="World"/>s non generic remove operations on <see cref="Entity"/>s works correctly.
+    /// </summary>
     [Test]
     public void Remove_NonGeneric()
     {
         var entity = _world.Create(_entityGroup);
         var entity2 = _world.Create(_entityGroup);
-        _world.RemoveRange(in entity, typeof(Transform));
-        _world.RemoveRange(in entity2, typeof(Transform));
+        _world.RemoveRange(entity, typeof(Transform));
+        _world.RemoveRange(entity2, typeof(Transform));
 
-        That(_world.GetArchetype(in entity2), Is.EqualTo(_world.GetArchetype(in entity)));
-        That(_world.GetArchetype(in entity).Size, Is.EqualTo(1));
-        That(_world.GetArchetype(in entity).Chunks[0].Size, Is.EqualTo(2));
+        That(_world.GetArchetype(entity2), Is.EqualTo(_world.GetArchetype(entity)));
+        That(_world.GetArchetype(entity).Size, Is.EqualTo(1));
+        That(_world.GetArchetype(entity).Chunks[0].Size, Is.EqualTo(2));
     }
 
+    /// <summary>
+    ///     Checks if the <see cref="World"/>s non generic add operations on <see cref="Entity"/>s works correctly.
+    /// </summary>
     [Test]
     public void Add_NonGeneric()
     {
         var entity = _world.Create(_entityGroup);
         var entity2 = _world.Create(_entityGroup);
-        _world.AddRange(in entity, new Ai());
-        _world.AddRange(in entity2, new Ai());
+        _world.AddRange(entity, new Ai());
+        _world.AddRange(entity2, new Ai());
 
         _world.TryGetArchetype(_entityAiGroup, out var arch);
-        That(_world.GetArchetype(in entity2), Is.EqualTo(_world.GetArchetype(in entity)));
-        That(arch, Is.EqualTo(_world.GetArchetype(in entity)));
+        That(_world.GetArchetype(entity2), Is.EqualTo(_world.GetArchetype(entity)));
+        That(arch, Is.EqualTo(_world.GetArchetype(entity)));
     }
 }
 
@@ -386,6 +575,9 @@ public partial class WorldTest
 public partial class WorldTest
 {
 
+    /// <summary>
+    ///     Checks if the <see cref="World"/>s source generated create operations on <see cref="Entity"/>s works correctly.
+    /// </summary>
     [Test]
     public void GeneratedCreate()
     {
@@ -393,47 +585,56 @@ public partial class WorldTest
         var entity = _world.Create(new Transform(), new Rotation());
 
         That(_world.Size, Is.EqualTo(size + 1));
-        True(_world.IsAlive(in entity));
+        True(_world.IsAlive(entity));
     }
 
+    /// <summary>
+    ///     Checks if the <see cref="World"/>s source generated set get has operations on <see cref="Entity"/>s works correctly.
+    /// </summary>
     [Test]
     public void GeneratedSetGetAndHas()
     {
         var entity = _world.Create(new Transform { X = 10, Y = 10 }, new Rotation { X = 10, Y = 10 });
-        True(_world.Has<Transform, Rotation>(in entity));
+        True(_world.Has<Transform, Rotation>(entity));
 
         _world.Set(entity, new Transform { X = 20, Y = 20 }, new Rotation { X = 20, Y = 20 });
-        var references = _world.Get<Transform, Rotation>(in entity);
+        var references = _world.Get<Transform, Rotation>(entity);
         That(references.t0.X, Is.EqualTo(20));
         That(references.t0.Y, Is.EqualTo(20));
         That(references.t1.X, Is.EqualTo(20));
         That(references.t1.Y, Is.EqualTo(20));
     }
 
+    /// <summary>
+    ///     Checks if the <see cref="World"/>s source generated remove operations on <see cref="Entity"/>s works correctly.
+    /// </summary>
     [Test]
     public void GeneratedRemove()
     {
 
         var entity = _world.Create(new Transform(), new Rotation(), new Ai());
         var entity2 = _world.Create(new Transform(), new Rotation(), new Ai());
-        _world.Remove<Rotation, Ai>(in entity);
-        _world.Remove<Rotation, Ai>(in entity2);
+        _world.Remove<Rotation, Ai>(entity);
+        _world.Remove<Rotation, Ai>(entity2);
 
-        That(_world.GetArchetype(in entity2), Is.EqualTo(_world.GetArchetype(in entity)));
-        That(_world.GetArchetype(in entity).Size, Is.EqualTo(1));
-        That(_world.GetArchetype(in entity).Chunks[0].Size, Is.EqualTo(2));
+        That(_world.GetArchetype(entity2), Is.EqualTo(_world.GetArchetype(entity)));
+        That(_world.GetArchetype(entity).Size, Is.EqualTo(1));
+        That(_world.GetArchetype(entity).Chunks[0].Size, Is.EqualTo(2));
     }
 
+    /// <summary>
+    ///     Checks if the <see cref="World"/>s source generated add operations on <see cref="Entity"/>s works correctly.
+    /// </summary>
     [Test]
     public void GeneratedAdd()
     {
         var entity = _world.Create<Transform>();
         var entity2 = _world.Create<Transform>();
-        _world.Add<Rotation, Ai>(in entity);
-        _world.Add<Rotation, Ai>(in entity2);
+        _world.Add<Rotation, Ai>(entity);
+        _world.Add<Rotation, Ai>(entity2);
 
         _world.TryGetArchetype(_entityAiGroup, out var arch);
-        That(_world.GetArchetype(in entity2), Is.EqualTo(_world.GetArchetype(in entity)));
-        That(arch, Is.EqualTo(_world.GetArchetype(in entity)));
+        That(_world.GetArchetype(entity2), Is.EqualTo(_world.GetArchetype(entity)));
+        That(arch, Is.EqualTo(_world.GetArchetype(entity)));
     }
 }

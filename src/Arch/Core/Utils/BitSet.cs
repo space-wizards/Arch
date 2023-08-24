@@ -15,9 +15,15 @@ public class BitSet
     // NOTE: Is a byte not 8 bits?
     internal const int ByteSize = 5; // log_2(BitSize + 1)
 
+    /// <summary>
+    ///     Determines the required length of an <see cref="BitSet"/> to hold the passed id or bit.
+    /// </summary>
+    /// <param name="id">The id or bit.</param>
+    /// <returns>A size of required <see cref="uint"/>s for the bitset.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int RequiredLength(int id)
     {
-        return (int)Math.Ceiling((float)id / (float)32);
+        return (int)Math.Ceiling((float)id / (float)31);
     }
 
     private uint[] _bits;
@@ -28,6 +34,14 @@ public class BitSet
     public BitSet()
     {
         _bits = new uint[1];
+    }
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="BitSet" /> class.
+    /// </summary>
+    public BitSet(params uint[] bits)
+    {
+        _bits = bits;
     }
 
     /// <summary>
@@ -191,23 +205,13 @@ public class BitSet
         for (var i = 0; i < count; i++)
         {
             var bit = _bits[i];
-            if ((bit & otherBits[i]) == 0)
+            if ((bit & otherBits[i]) != 0)
             {
-                return true;
+                return false;
             }
         }
 
-        // handle extra bits on our side that might just be all zero
-        var bitCount = _bits.Length;
-        for (var i = count; i < bitCount; i++)
-        {
-            if (_bits[i] != 0)
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return true;
     }
 
     /// <summary>
@@ -259,15 +263,21 @@ public class BitSet
     /// </summary>
     /// <returns>The hash.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Span<uint> AsSpan(Span<uint> span)
+    public Span<uint> AsSpan(Span<uint> span, bool zero = true)
     {
-        // Prevent exception because target array is to small for copy operation
-        if(_bits.Length > span.Length)
+        // Copy everything thats possible from one to another
+        var length = Math.Min(Length, span.Length);
+        for (var index = 0; index < length; index++)
         {
-            return Span<uint>.Empty;
+            span[index] = _bits[index];
         }
 
-        _bits.CopyTo(span);
+        // Zero the rest space which was not overriden due to the copy.
+        for (var index = length; zero && index < span.Length; index++)
+        {
+            span[index] = 0;
+        }
+
         return span[.._bits.Length];
     }
 
@@ -278,7 +288,7 @@ public class BitSet
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override int GetHashCode()
     {
-        return Component.GetHashCode(this);
+        return Component.GetHashCode(AsSpan());
     }
 
     /// <summary>
@@ -292,7 +302,7 @@ public class BitSet
         var binaryBuilder = new StringBuilder();
         foreach (var bit in _bits)
         {
-            binaryBuilder.Append(Convert.ToString(bit, 2)).Append(',');
+            binaryBuilder.Append(Convert.ToString((uint)bit, 2).PadLeft(32, '0')).Append(',');
         }
         binaryBuilder.Length--;
 
@@ -406,17 +416,24 @@ public ref struct SpanBitSet
     /// <summary>
     ///     Copies the bits into a <see cref="Span{T}"/> and returns a slice containing the copied <see cref="_bits"/>.
     /// </summary>
+    /// <param name=""></param>
     /// <returns>The hash.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Span<uint> AsSpan(Span<uint> span)
+    public Span<uint> AsSpan(Span<uint> span, bool zero = true)
     {
         // Prevent exception because target array is to small for copy operation
-        if(_bits.Length > span.Length)
+        var length = Math.Min(this._bits.Length, span.Length);
+        for (var index = 0; index < length; index++)
         {
-            return Span<uint>.Empty;
+            span[index] = _bits[index];
         }
 
-        _bits.CopyTo(span);
+        // Zero the rest space which was not overriden due to the copy.
+        for (var index = length; zero && index < span.Length; index++)
+        {
+            span[index] = 0;
+        }
+
         return span[.._bits.Length];
     }
 
@@ -427,7 +444,7 @@ public ref struct SpanBitSet
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override int GetHashCode()
     {
-        return Component.GetHashCode(ref this);
+        return Component.GetHashCode(AsSpan());
     }
 
     /// <summary>
@@ -437,12 +454,11 @@ public ref struct SpanBitSet
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override string ToString()
     {
-
         // Convert uint to binary form for pretty printing
         var binaryBuilder = new StringBuilder();
         foreach (var bit in _bits)
         {
-            binaryBuilder.Append(Convert.ToString(bit, 2)).Append(',');
+            binaryBuilder.Append(Convert.ToString((uint)bit, 2).PadLeft(32, '0')).Append(',');
         }
         binaryBuilder.Length--;
 

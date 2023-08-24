@@ -109,9 +109,10 @@ public static class HasExtensions
         var template =
             $$"""
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool Has<{{generics}}>(in Entity entity)
+            [Pure]
+            public bool Has<{{generics}}>(Entity entity)
             {
-                var archetype = EntityInfo[entity.Id].Archetype;
+                var archetype = EntityInfo.GetArchetype(entity.Id);
                 return archetype.Has<{{generics}}>();
             }
             """;
@@ -136,10 +137,11 @@ public static class HasExtensions
         var template =
             $$"""
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static bool Has<{{generics}}>(this in Entity entity)
+            [Pure]
+            public static bool Has<{{generics}}>(this Entity entity)
             {
                 var world = World.Worlds[entity.WorldId];
-                return world.Has<{{generics}}>(in entity);
+                return world.Has<{{generics}}>(entity);
             }
             """;
 

@@ -1,6 +1,7 @@
+using Arch.Core;
 using Arch.Core.Utils;
 
-namespace Arch.Core.CommandBuffer;
+namespace Arch.CommandBuffer;
 
 /// <summary>
 ///     The <see cref="StructuralEntity"/> struct
@@ -102,6 +103,10 @@ internal class StructuralSparseArray
     /// </summary>
     public void Clear()
     {
+        for (var index = 0; index < Entities.Length; index++)
+        {
+            Entities[index] = -1;
+        }
         Size = 0;
     }
 }
@@ -112,7 +117,7 @@ internal class StructuralSparseArray
 ///     The <see cref="StructuralSparseSet"/> class
 ///     stores a series of <see cref="StructuralSparseArray"/>'s and their associated components.
 /// </summary>
-internal class StructuralSparseSet : IDisposable
+internal class StructuralSparseSet
 {
     private readonly object _createLock = new();
     private readonly object _setLock = new();
@@ -126,6 +131,7 @@ internal class StructuralSparseSet : IDisposable
     {
         Capacity = capacity;
         Entities = new List<StructuralEntity>(capacity);
+        Used = Array.Empty<int>();
         Components = Array.Empty<StructuralSparseArray>();
     }
 
@@ -134,7 +140,6 @@ internal class StructuralSparseSet : IDisposable
     /// </summary>
     public int Capacity { get; }
 
-    // NOTE: Should this be `Count` to follow the existing `ICollection` API?
     /// <summary>
     ///     Gets the total number of elements in the <see cref="StructuralSparseSet"/>.
     /// </summary>
@@ -161,6 +166,72 @@ internal class StructuralSparseSet : IDisposable
     public StructuralSparseArray[] Components; // The components as a `SparseSet` so we can easily access them via component IDs.
 
     /// <summary>
+    ///     Ensures the capacity for registered components types.
+    ///     Resizes the existing <see cref="Components"/> array properly to fit the id in.
+    ///     <remarks>Does not ensure the capacity in terms of how many operations or components are recorded.</remarks>
+    /// </summary>
+    /// <param name="capacity">The new capacity, the id of the component which will be ensured to fit into the arrays.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void EnsureTypeCapacity(int capacity)
+    {
+        // Resize arrays
+        if (capacity < Components.Length)
+        {
+            return;
+        }
+        Array.Resize(ref Components, capacity + 1);
+    }
+    /// <summary>
+    ///     Ensures the capacity for the <see cref="Used"/> array.
+    /// </summary>
+    /// <param name="capacity">The new capacity.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void EnsureUsedCapacity(int capacity)
+    {
+        // Resize UsedSize array.
+        if (capacity < UsedSize)
+        {
+            return;
+        }
+        Array.Resize(ref Used, UsedSize + 1);
+    }
+
+    /// <summary>
+    ///     Adds an <see cref="StructuralSparseArray"/> to the <see cref="Components"/> list and updates the <see cref="Used"/> properly.
+    /// </summary>
+    /// <param name="type">The <see cref="ComponentType"/> of the <see cref="StructuralSparseArray"/>.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void AddStructuralSparseArray(ComponentType type)
+    {
+        Components[type.Id] = new StructuralSparseArray(type, type.Id);
+
+        Used[UsedSize] = type.Id;
+        UsedSize++;
+    }
+
+    /// <summary>
+    ///     Checks whether a <see cref="StructuralSparseArray"/> for a certain <see cref="ComponentType"/> exists in the <see cref="Components"/>.
+    /// </summary>
+    /// <param name="type">The <see cref="ComponentType"/> to check.</param>
+    /// <returns>True if it does, false if not.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool HasStructuralSparseArray(ComponentType type)
+    {
+        return Components[type.Id] != null;
+    }
+
+    /// <summary>
+    ///     Returns the existing <see cref="StructuralSparseArray"/> for the registered <see cref="ComponentType"/>.
+    /// </summary>
+    /// <param name="type">The <see cref="ComponentType"/>.</param>
+    /// <returns>The existing <see cref="StructuralSparseArray"/> instance.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private StructuralSparseArray GetStructuralSparseArray(ComponentType type)
+    {
+        return Components[type.Id];
+    }
+
+    /// <summary>
     ///     Adds an <see cref="Entity"/> to the <see cref="StructuralSparseSet"/>.
     /// </summary>
     /// <param name="entity">The <see cref="Entity"/>.</param>
@@ -174,7 +245,6 @@ internal class StructuralSparseSet : IDisposable
             Entities.Add(new StructuralEntity(entity, id));
 
             Count++;
-
             return id;
         }
     }
@@ -188,24 +258,20 @@ internal class StructuralSparseSet : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Set<T>(int index)
     {
-        var id = Component<T>.ComponentType.Id;
-
+        var componentType = Component<T>.ComponentType;
         lock (_setLock)
         {
-            // Allocate new sparsearray for component and resize arrays
-            if (id >= Components.Length)
+            // Ensure that enough space for the additional component type array exists and add it if it does not exist yet.
+            EnsureTypeCapacity(componentType.Id);
+            if (!HasStructuralSparseArray(componentType))
             {
-                Array.Resize(ref Used, UsedSize + 1);
-                Array.Resize(ref Components, id + 1);
-
-                Components[id] = new StructuralSparseArray(typeof(T), Capacity);
-
-                Used[UsedSize] = id;
-                UsedSize++;
+                EnsureUsedCapacity(UsedSize+1);
+                AddStructuralSparseArray(componentType);
             }
         }
 
-        var array = Components[id];
+        // Add to array.
+        var array = GetStructuralSparseArray(componentType);
         lock (array)
         {
             if (!array.Contains(index))
@@ -231,10 +297,10 @@ internal class StructuralSparseSet : IDisposable
     }
 
     /// <summary>
-    ///     Disposes the <see cref="StructuralSparseSet"/>.
+    ///     Clears the <see cref="StructuralSparseSet"/>.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Dispose()
+    public void Clear()
     {
         Count = 0;
         Entities.Clear();

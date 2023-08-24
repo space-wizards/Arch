@@ -18,6 +18,12 @@ public static class CreateExtensions
         var parameters = new StringBuilder().GenericInDefaultParams(amount);
         var inParameters = new StringBuilder().InsertGenericInParams(amount);
 
+        var addEvents = new StringBuilder();
+        for (var index = 0; index <= amount; index++)
+        {
+            addEvents.AppendLine($"OnComponentAdded<T{index}>(entity);");
+        }
+
         var template =
             $$"""
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -27,14 +33,14 @@ public static class CreateExtensions
 
                 // Recycle id or increase
                 var recycle = RecycledIds.TryDequeue(out var recycledId);
-                var recycled = recycle ? recycledId : new RecycledEntity(Size,0);
+                var recycled = recycle ? recycledId : new RecycledEntity(Size, 1);
 
                 // Create new entity and put it to the back of the array
                 var entity = new Entity(recycled.Id, Id);
 
                 // Add to archetype & mapping
                 var archetype = GetOrCreate(types);
-                var createdChunk = archetype.Add(in entity, out var slot);
+                var createdChunk = archetype.Add(entity, out var slot);
 
                 archetype.Set<{{generics}}>(ref slot, {{inParameters}});
 
@@ -46,9 +52,12 @@ public static class CreateExtensions
                 }
 
                 // Map
-                EntityInfo[recycled.Id] = new EntityInfo { Version = recycled.Version, Archetype = archetype, Slot = slot };
+                EntityInfo.Add(entity.Id, recycled.Version, archetype, slot);
 
                 Size++;
+                OnEntityCreated(entity);
+
+                {{addEvents}}
                 return entity;
             }
             """;

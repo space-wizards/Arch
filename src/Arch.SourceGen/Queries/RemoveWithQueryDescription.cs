@@ -32,9 +32,11 @@ public static class RemoveWithQueryDesription
         var types = new StringBuilder().GenericTypeParams(amount);
 
         var clearIds = new StringBuilder();
+        var removeEvents = new StringBuilder();
         for (var index = 0; index <= amount; index++)
         {
             clearIds.AppendLine($"spanBitSet.ClearBit(Component<T{index}>.ComponentType.Id);");
+            removeEvents.AppendLine($"OnComponentRemoved<T{index}>(archetype);");
         }
 
         var template =
@@ -66,34 +68,16 @@ public static class RemoveWithQueryDesription
                         newArchetype = GetOrCreate(archetype.Types.Remove({{types}}));
                     }
 
+                    {{removeEvents}}
+
                     // Get last slots before copy, for updating entityinfo later
                     var archetypeSlot = archetype.LastSlot;
                     var newArchetypeLastSlot = newArchetype.LastSlot;
-                    newArchetypeLastSlot++;
+                    Slot.Shift(ref newArchetypeLastSlot, newArchetype.EntitiesPerChunk);
+                    EntityInfo.Shift(archetype, archetypeSlot, newArchetype, newArchetypeLastSlot);
 
                     Archetype.Copy(archetype, newArchetype);
                     archetype.Clear();
-
-                    // Update the entityInfo of all copied entities.
-                    for (var chunkIndex = archetypeSlot.ChunkIndex; chunkIndex >= 0; --chunkIndex)
-                    {
-                        ref var chunk = ref archetype.GetChunk(chunkIndex);
-                        ref var entityFirstElement = ref chunk.Entities.DangerousGetReference();
-                        for (var index = archetypeSlot.Index; index >= 0; --index)
-                        {
-                            ref readonly var entity = ref Unsafe.Add(ref entityFirstElement, index);
-
-                            // Calculate new entity slot based on its old slot.
-                            var entitySlot = new Slot(index, chunkIndex);
-                            var newSlot = Slot.Shift(entitySlot, archetype.EntitiesPerChunk, newArchetypeLastSlot, newArchetype.EntitiesPerChunk);
-
-                            // Update entity info
-                            var entityInfo = EntityInfo[entity.Id];
-                            entityInfo.Slot = newSlot;
-                            entityInfo.Archetype = newArchetype;
-                            EntityInfo[entity.Id] = entityInfo;
-                        }
-                    }
                 }
             }
             """;

@@ -105,6 +105,41 @@ public static class ComponentRegistry
     public static int Size { get; private set; }
 
     /// <summary>
+    ///     Adds a new <see cref="ComponentType"/> manually and registers it.
+    ///     <remarks>You should only be using this when you exactly know what you are doing.</remarks>
+    /// </summary>
+    /// <param name="type">Its <see cref="Type"/>.</param>
+    /// <param name="typeSize">The size in bytes of <see cref="type"/>.</param>
+    /// <returns>Its <see cref="ComponentType"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static ComponentType Add(Type type, int typeSize)
+    {
+        if (TryGet(type, out var meta))
+        {
+            return meta;
+        }
+
+        // Register and assign component id
+        meta = new ComponentType(Size + 1, type, typeSize, type.GetFields().Length == 0);
+        _types.Add(type, meta);
+
+        Size++;
+        return meta;
+    }
+
+    /// <summary>
+    ///     Adds a new <see cref="ComponentType"/> manually and registers it.
+    ///     <remarks>You should only be using this when you exactly know what you are doing.</remarks>
+    /// </summary>
+    /// <param name="type">Its <see cref="Type"/>.</param>
+    /// <returns>Its <see cref="ComponentType"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ComponentType Add(ComponentType type)
+    {
+        return Add(type.Type, type.ByteSize);
+    }
+
+    /// <summary>
     ///     Adds a new component and registers it.
     /// </summary>
     /// <typeparam name="T">The generic type.</typeparam>
@@ -112,7 +147,7 @@ public static class ComponentRegistry
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ComponentType Add<T>()
     {
-        return Add(typeof(T));
+        return Add(typeof(T), SizeOf<T>());
     }
 
     /// <summary>
@@ -123,18 +158,7 @@ public static class ComponentRegistry
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ComponentType Add(Type type)
     {
-        if (TryGet(type, out var meta))
-        {
-            return meta;
-        }
-
-        // Register and assign component id
-        var size = type.IsValueType ? Marshal.SizeOf(type) : IntPtr.Size;
-        meta = new ComponentType(Size, type, size, type.GetFields().Length == 0);
-        _types.Add(type, meta);
-
-        Size++;
-        return meta;
+        return Add(type, SizeOf(type));
     }
 
     // NOTE: Should this be `Contains` to follow other existing .NET APIs (ICollection<T>.Contains(T))?
@@ -142,7 +166,7 @@ public static class ComponentRegistry
     ///     Checks if a component is registered.
     /// </summary>
     /// <typeparam name="T">Its generic type.</typeparam>
-    /// <returns>True if it is, otherwhise false.</returns>
+    /// <returns>True if it is, otherwise false.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Has<T>()
     {
@@ -154,7 +178,7 @@ public static class ComponentRegistry
     ///      Checks if a component is registered.
     /// </summary>
     /// <param name="type">Its <see cref="Type"/>.</param>
-    /// <returns>True if it is, otherwhise false.</returns>
+    /// <returns>True if it is, otherwise false.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Has(Type type)
     {
@@ -165,7 +189,7 @@ public static class ComponentRegistry
     ///     Removes a registered component by its <see cref="Type"/> from the <see cref="ComponentRegistry"/>.
     /// </summary>
     /// <typeparam name="T">The component to remove.</typeparam>
-    /// <returns>True if it was sucessfull, false if not.</returns>
+    /// <returns>True if it was successful, false if not.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Remove<T>()
     {
@@ -176,11 +200,47 @@ public static class ComponentRegistry
     ///     Removes a registered component by its <see cref="Type"/> from the <see cref="ComponentRegistry"/>.
     /// </summary>
     /// <param name="type">The component <see cref="Type"/> to remove.</param>
-    /// <returns>True if it was sucessfull, false if not.</returns>
+    /// <returns>True if it was successful, false if not.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Remove(Type type)
     {
         return _types.Remove(type);
+    }
+
+    /// <summary>
+    ///     Removes a registered component by its <see cref="Type"/> from the <see cref="ComponentRegistry"/>.
+    /// </summary>
+    /// <param name="type">The component <see cref="Type"/> to remove.</param>
+    /// <param name="compType">The removed <see cref="ComponentType"/>, if it existed.</param>
+    /// <returns>True if it was successful, false if not.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool Remove(Type type, out ComponentType compType)
+    {
+        return _types.Remove(type, out compType);
+    }
+
+    /// <summary>
+    ///     Replaces a registered component by its <see cref="Type"/> with another one.
+    ///     The new <see cref="Type"/> will receive the id from the old one.
+    ///     <remarks>Use with caution, might cause undefined behaviour if you do not know what exactly you are doing.</remarks>
+    /// </summary>
+    /// <param name="oldType">The old component <see cref="Type"/> to be replaced.</param>
+    /// <param name="newType">The new component <see cref="Type"/> that replaced the old one.</param>
+    /// <param name="newTypeSize">The size in bytes of <see cref="newType"/>.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void Replace(Type oldType, Type newType, int newTypeSize)
+    {
+        var id = 0;
+        if (Remove(oldType, out var oldComponentType))
+        {
+            id = oldComponentType.Id;
+        }
+        else
+        {
+            id = ++Size;
+        }
+
+        _types.Add(newType, new ComponentType(id, newType, newTypeSize, newType.GetFields().Length == 0));
     }
 
     /// <summary>
@@ -191,11 +251,9 @@ public static class ComponentRegistry
     /// <typeparam name="T0">The old component to be replaced.</typeparam>
     /// <typeparam name="T1">The new component that replaced the old one.</typeparam>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Replace<T0,T1>()
+    public static void Replace<T0, T1>()
     {
-        var oldType = typeof(T0);
-        var newType = typeof(T1);
-        Replace(oldType, newType);
+        Replace(typeof(T0), typeof(T1), SizeOf<T1>());
     }
 
     /// <summary>
@@ -208,20 +266,7 @@ public static class ComponentRegistry
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Replace(Type oldType, Type newType)
     {
-        var id = 0;
-        if (TryGet(oldType, out var oldComponentType))
-        {
-            id = oldComponentType.Id;
-            _types.Remove(oldType);
-        }
-        else
-        {
-            id = Size;
-            Size++;
-        }
-
-        var size = newType.IsValueType ? Marshal.SizeOf(newType) : IntPtr.Size;
-        _types.Add(newType, new ComponentType(id, newType, size, newType.GetFields().Length == 0));
+        Replace(oldType, newType, SizeOf(newType));
     }
 
     /// <summary>
@@ -229,7 +274,7 @@ public static class ComponentRegistry
     /// </summary>
     /// <typeparam name="T">Its generic type.</typeparam>
     /// <param name="componentType">Its <see cref="ComponentType"/>, if it is registered.</param>
-    /// <returns>True if it registered, otherwhise false.</returns>
+    /// <returns>True if it registered, otherwise false.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool TryGet<T>(out ComponentType componentType)
     {
@@ -241,11 +286,47 @@ public static class ComponentRegistry
     /// </summary>
     /// <param name="type">Its <see cref="Type"/>.</param>
     /// <param name="componentType">Its <see cref="ComponentType"/>, if it is registered.</param>
-    /// <returns>True if it registered, otherwhise false.</returns>
+    /// <returns>True if it registered, otherwise false.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool TryGet(Type type, out ComponentType componentType)
     {
         return _types.TryGetValue(type, out componentType);
+    }
+
+    /// <summary>
+    ///     Returns the size in bytes of the passed generic.
+    /// </summary>
+    /// <typeparam name="T">The generic.</typeparam>
+    /// <returns>Its size.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int SizeOf<T>()
+    {
+        if (typeof(T).IsValueType)
+        {
+            return Unsafe.SizeOf<T>();
+        }
+
+        return IntPtr.Size;
+    }
+
+    /// TODO: Check if this still AOT compatible?
+    /// <summary>
+    ///     Returns the size in bytes of the passed type.
+    /// </summary>
+    /// <param name="type">The type.</param>
+    /// <returns>Its size in bytes.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int SizeOf(Type type)
+    {
+        if (type.IsValueType)
+        {
+            return (int) typeof(Unsafe)
+                .GetMethod(nameof(Unsafe.SizeOf))!
+                .MakeGenericMethod(type)
+                .Invoke(null, null)!;
+        }
+
+        return IntPtr.Size;
     }
 }
 
@@ -294,6 +375,7 @@ public static class Component
         return !ComponentRegistry.TryGet(type, out var index) ? ComponentRegistry.Add(type) : index;
     }
 
+    /// TODO : Find a nicer way? Probably cache hash somewhere in Query or Description instead to avoid calculating it every call?
     /// <summary>
     ///     Calculates the hash code of a <see cref="ComponentType"/> array, which is unique for the elements contained in the array.
     ///     The order of the elements does not change the hashcode, so it depends on the elements themselves.
@@ -303,146 +385,41 @@ public static class Component
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int GetHashCode(Span<ComponentType> obj)
     {
-        // From https://stackoverflow.com/a/52172541.
-        unchecked
-        {
-            int hash = 0;
-            foreach (var type in obj)
-            {
-                int x = type.Id + 1;
+          // Search for the highest id to determine how much uints we need for the stack.
+          var highestId = 0;
+          foreach (ref var cmp in obj)
+          {
+              if (cmp.Id > highestId)
+              {
+                  highestId = cmp.Id;
+              }
+          }
 
-                x ^= x >> 17;
-                x *= 830770091;   // 0xed5ad4bb
-                x ^= x >> 11;
-                x *= -1404298415; // 0xac4c1b51
-                x ^= x >> 15;
-                x *= 830770091;   // 0x31848bab
-                x ^= x >> 14;
+          // Allocate the stack and set bits to replicate a bitset
+          var length = BitSet.RequiredLength(highestId);
+          Span<uint> stack = stackalloc uint[length];
+          var spanBitSet = new SpanBitSet(stack);
 
-                hash += x;
-            }
+          foreach (ref var type in obj)
+          {
+              var x = type.Id;
+              spanBitSet.SetBit(x);
+          }
 
-            return hash;
-        }
+          return GetHashCode(stack);
     }
 
     /// <summary>
-    ///     Calculates the hash code of a <see cref="ComponentType"/> Id array, which is unique for the elements contained in the array.
-    ///     The order of the elements does not change the hashcode, so it depends on the elements themselves.
-    /// </summary>
-    /// <param name="obj">The <see cref="ComponentType"/> array.</param>
-    /// <returns>A unique hashcode for the contained elements, regardless of their order.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int GetHashCode(Span<int> obj)
-    {
-        // From https://stackoverflow.com/a/52172541.
-        unchecked
-        {
-            int hash = 0;
-            foreach (var type in obj)
-            {
-                int x = type + 1;
-
-                x ^= x >> 17;
-                x *= 830770091;   // 0xed5ad4bb
-                x ^= x >> 11;
-                x *= -1404298415; // 0xac4c1b51
-                x ^= x >> 15;
-                x *= 830770091;   // 0x31848bab
-                x ^= x >> 14;
-
-                hash += x;
-            }
-
-            return hash;
-        }
-    }
-
-    /// <summary>
-    ///     Calculates the hash code of a <see cref="BitSet"/>, which is unique for the elements contained in the array.
+    ///     Calculates the hash code of a bitset span, which is unique for the elements contained in the array.
     ///     The order of the elements does not change the hashcode, so it depends on the elements themselves.
     /// </summary>
     /// <param name="obj">The <see cref="BitSet"/>.</param>
     /// <returns>A unique hashcode for the contained elements, regardless of their order.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int GetHashCode(BitSet obj)
+    public static int GetHashCode(Span<uint> span)
     {
-        // From https://stackoverflow.com/a/52172541.
-        unchecked
-        {
-            var span = obj.AsSpan();
-            int hash = 0;
-            for (var index = 0; index < span.Length; index++)
-            {
-                var value = span[index];
-                for (var i = 0; i < BitSet.BitSize; i++)
-                {
-                    if ((value & 1) != 1)
-                    {
-                        continue;
-                    }
-
-                    int x = (index*BitSet.BitSize)+i + 1;
-
-                    x ^= x >> 17;
-                    x *= 830770091;   // 0xed5ad4bb
-                    x ^= x >> 11;
-                    x *= -1404298415; // 0xac4c1b51
-                    x ^= x >> 15;
-                    x *= 830770091;   // 0x31848bab
-                    x ^= x >> 14;
-
-                    hash += x;
-                    value >>= 1;
-                }
-            }
-
-            return hash;
-        }
-    }
-
-    /// <summary>
-    ///     Calculates the hash code of a <see cref="SpanBitSet"/>, which is unique for the elements contained in the array.
-    ///     The order of the elements does not change the hashcode, so it depends on the elements themselves.
-    /// </summary>
-    /// <param name="obj">The <see cref="SpanBitSet"/>.</param>
-    /// <returns>A unique hashcode for the contained elements, regardless of their order.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int GetHashCode(ref SpanBitSet obj)
-    {
-        // From https://stackoverflow.com/a/52172541.
-        unchecked
-        {
-            var span = obj.AsSpan();
-            int hash = 0;
-            for (var index = 0; index < span.Length; index++)
-            {
-                var value = span[index];
-                for (var i = 0; i < BitSet.BitSize; i++)
-                {
-                    if ((value & 1) != 1)
-                    {
-                        value >>= 1;
-                        continue;
-                    }
-
-                    int x = (index*BitSet.BitSize)+i + 1;
-
-                    x ^= x >> 17;
-                    x *= 830770091;   // 0xed5ad4bb
-                    x ^= x >> 11;
-                    x *= -1404298415; // 0xac4c1b51
-                    x ^= x >> 15;
-                    x *= 830770091;   // 0x31848bab
-                    x ^= x >> 14;
-
-                    hash += x;
-                    value >>= 1;
-                }
-            }
-
-            return hash;
-        }
+        var bytes = MemoryMarshal.AsBytes(span);
+        return (int)MurmurHash3.Hash32(bytes, 0);
     }
 }
 
