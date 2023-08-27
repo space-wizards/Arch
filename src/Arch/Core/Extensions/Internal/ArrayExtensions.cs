@@ -48,6 +48,26 @@ internal static class ArrayExtensions
         return result;
     }
 
+    /// <summary>
+    ///     Adds a list of items to an array.
+    /// </summary>
+    /// <typeparam name="T">The generic type.</typeparam>
+    /// <param name="target">The target array.</param>
+    /// <param name="items">The <see cref="IList"/> of items which will be added.</param>
+    /// <returns>The new array.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static T[] Add<T>(this T[] target, Span<T> items)
+    {
+        var result = new T[target.Length + items.Length];
+        target.CopyTo(result, 0);
+
+        for (var index = 0; index < items.Length; index++)
+        {
+            result[target.Length + index] = items[index];
+        }
+
+        return result;
+    }
 
     /// <summary>
     ///     Removes a list of items from an array by value equality.

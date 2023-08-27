@@ -1,5 +1,3 @@
-using System.Buffers;
-using Arch.Core;
 using Arch.Core.Extensions.Internal;
 using Arch.Core.Utils;
 
@@ -168,7 +166,46 @@ public static class WorldExtensions
         }
 
         world.Move(entity, oldArchetype, newArchetype, out _);
-        
+
+#if EVENTS
+        for (var i = 0; i < components.Count; i++)
+        {
+            world.OnComponentAdded(entity, components[i]);
+        }
+#endif
+    }
+
+    /// <summary>
+    ///     Adds an list of new components to the <see cref="Entity"/> and moves it to the new <see cref="Archetype"/>.
+    /// </summary>
+    /// <param name="entity">The <see cref="Entity"/>.</param>
+    /// <param name="components">A <see cref="IList{T}"/> of <see cref="ComponentType"/>'s, those are added to the <see cref="Entity"/>.</param>
+    [SkipLocalsInit]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void AddRange(this World world, Entity entity, Span<ComponentType> components)
+    {
+        var oldArchetype = world.EntityInfo.GetArchetype(entity.Id);
+
+        // BitSet to stack/span bitset, size big enough to contain ALL registered components.
+        Span<uint> stack = stackalloc uint[BitSet.RequiredLength(ComponentRegistry.Size)];
+        oldArchetype.BitSet.AsSpan(stack);
+
+        // Create a span bitset, doing it local saves us headache and gargabe
+        var spanBitSet = new SpanBitSet(stack);
+
+        for (var index = 0; index < components.Length; index++)
+        {
+            var type = components[index];
+            spanBitSet.SetBit(type.Id);
+        }
+
+        if (!world.TryGetArchetype(spanBitSet.GetHashCode(), out var newArchetype))
+        {
+            newArchetype = world.GetOrCreate(oldArchetype.Types.Add(components));
+        }
+
+        world.Move(entity, oldArchetype, newArchetype, out _);
+
 #if EVENTS
         for (var i = 0; i < components.Count; i++)
         {
