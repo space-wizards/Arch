@@ -1,4 +1,3 @@
-using System.Drawing;
 using System.Text;
 
 namespace Arch.Core.Utils;
@@ -26,6 +25,9 @@ public class BitSet
         return (int)Math.Ceiling((float)id / (float)31);
     }
 
+    /// <summary>
+    ///     The bits from the bitset.
+    /// </summary>
     private uint[] _bits;
 
     /// <summary>
@@ -125,6 +127,7 @@ public class BitSet
         Array.Clear(_bits, 0, _bits.Length);
     }
 
+
     /// <summary>
     ///     Checks if all bits from this instance match those of the other instance.
     /// </summary>
@@ -133,12 +136,13 @@ public class BitSet
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool All(BitSet other)
     {
-        var otherBits = other._bits;
+        var bits = _bits.AsSpan();
+        var otherBits = other._bits.AsSpan();
         var count = Math.Min(_bits.Length, otherBits.Length);
 
         for (var i = 0; i < count; i++)
         {
-            var bit = _bits[i];
+            var bit = bits[i];
             if ((bit & otherBits[i]) != bit)
             {
                 return false;
@@ -146,10 +150,10 @@ public class BitSet
         }
 
         // Handle extra bits on our side that might just be all zero.
-        var bitCount = _bits.Length;
-        for (var i = count; i < bitCount; i++)
+        var bitsLength = bits.Length;
+        for (var i = count; i < bitsLength; i++)
         {
-            if (_bits[i] != 0)
+            if (bits[i] != 0)
             {
                 return false;
             }
@@ -166,12 +170,13 @@ public class BitSet
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Any(BitSet other)
     {
-        var otherBits = other._bits;
+        var bits = _bits.AsSpan();
+        var otherBits = other._bits.AsSpan();
         var count = Math.Min(_bits.Length, otherBits.Length);
 
         for (var i = 0; i < count; i++)
         {
-            var bit = _bits[i];
+            var bit = bits[i];
             if ((bit & otherBits[i]) != 0)
             {
                 return true;
@@ -182,7 +187,7 @@ public class BitSet
         var bitCount = _bits.Length;
         for (var i = count; i < bitCount; i++)
         {
-            if (_bits[i] != 0)
+            if (bits[i] != 0)
             {
                 return false;
             }
@@ -199,12 +204,13 @@ public class BitSet
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool None(BitSet other)
     {
-        var otherBits = other._bits;
+        var bits = _bits.AsSpan();
+        var otherBits = other._bits.AsSpan();
         var count = Math.Min(_bits.Length, otherBits.Length);
 
         for (var i = 0; i < count; i++)
         {
-            var bit = _bits[i];
+            var bit = bits[i];
             if ((bit & otherBits[i]) != 0)
             {
                 return false;
@@ -222,13 +228,13 @@ public class BitSet
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Exclusive(BitSet other)
     {
-
-        var otherBits = other._bits;
+        var bits = _bits.AsSpan();
+        var otherBits = other._bits.AsSpan();
         var count = Math.Min(_bits.Length, otherBits.Length);
 
         for (var i = 0; i < count; i++)
         {
-            var bit = _bits[i];
+            var bit = bits[i];
             if ((bit ^ otherBits[i]) != 0)
             {
                 return false;
@@ -239,7 +245,7 @@ public class BitSet
         var bitCount = _bits.Length;
         for (var i = count; i < bitCount; i++)
         {
-            if (_bits[i] != 0)
+            if (bits[i] != 0)
             {
                 return false;
             }
@@ -315,13 +321,16 @@ public class BitSet
 ///     represents a non resizable collection of bits.
 ///     Used to set, check and clear bits on a allocated <see cref="BitSet"/> or on the stack.
 /// </summary>
-public ref struct SpanBitSet
+public readonly ref struct SpanBitSet
 {
     private const int BitSize = (sizeof(uint) * 8) - 1; // 31
     // NOTE: Is a byte not 8 bits?
     private const int ByteSize = 5; // log_2(BitSize + 1)
 
-    private Span<uint> _bits;
+    /// <summary>
+    ///     The bits from the bitset.
+    /// </summary>
+    private readonly Span<uint> _bits;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="BitSet" /> class.
