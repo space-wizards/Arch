@@ -4,7 +4,6 @@ using Arch.Core.Utils;
 using Collections.Pooled;
 using JobScheduler;
 using ArchArrayExtensions = Arch.Core.Extensions.Internal.ArrayExtensions;
-using Component = Arch.Core.Utils.Component;
 
 namespace Arch.Core;
 
@@ -339,7 +338,10 @@ public partial class World : IDisposable
             if (archetype.Entities == 0)
             {
                 var hash = Component.GetHashCode(archetype.Types);
+
                 Archetypes.RemoveAt(index);
+                ArchetypeRemoved(archetype);
+
                 GroupToArchetype.Remove(hash);
 
                 // Remove archetype from other archetypes edges.
@@ -593,6 +595,7 @@ public partial class World
 
         GroupToArchetype[hash] = archetype;
         Archetypes.Add(archetype);
+        ArchetypeAdded(archetype);
 
         // Archetypes always allocate one single chunk upon construction
         Capacity += archetype.EntitiesPerChunk;
@@ -1404,6 +1407,35 @@ public partial class World
         }
 
         return cmps;
+    }
+
+    internal void ArchetypeAdded(Archetype archetype)
+    {
+        foreach (var query in QueryCache.Values)
+        {
+            if (query.Valid(archetype.BitSet))
+            {
+                query.Matches.Add(archetype);
+                archetype.QueryMatches.Add(query.Matches);
+            }
+        }
+    }
+
+
+    internal void ArchetypesAdded(Span<Archetype> archetypes)
+    {
+        foreach (var archetype in archetypes)
+        {
+            ArchetypeAdded(archetype);
+        }
+    }
+
+    internal void ArchetypeRemoved(Archetype archetype)
+    {
+        foreach (var matches in archetype.QueryMatches)
+        {
+            matches.Remove(archetype);
+        }
     }
 }
 

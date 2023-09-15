@@ -1,4 +1,3 @@
-using Arch.Core.Extensions;
 using Arch.Core.Extensions.Internal;
 using Arch.Core.Utils;
 using Collections.Pooled;
@@ -169,7 +168,6 @@ public partial struct QueryDescription : IEquatable<QueryDescription>
 [SkipLocalsInit]
 public readonly partial struct Query : IEquatable<Query>
 {
-    private readonly PooledList<Archetype> _archetypes;
     private readonly QueryDescription _queryDescription;
 
     private readonly BitSet _any;
@@ -178,6 +176,7 @@ public readonly partial struct Query : IEquatable<Query>
     private readonly BitSet _exclusive;
 
     private readonly bool _isExclusive;
+    public readonly PooledList<Archetype> Matches;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="Query"/> struct.
@@ -186,8 +185,6 @@ public readonly partial struct Query : IEquatable<Query>
     /// <param name="description">The <see cref="QueryDescription"/> used to target <see cref="Entity"/>'s.</param>
     internal Query(PooledList<Archetype> archetypes, QueryDescription description) : this()
     {
-        _archetypes = archetypes;
-
         Debug.Assert(
             !((description.Any.Length != 0 ||
             description.All.Length != 0 ||
@@ -216,6 +213,16 @@ public readonly partial struct Query : IEquatable<Query>
         }
 
         _queryDescription = description;
+
+        Matches = new PooledList<Archetype>();
+        foreach (var archetype in archetypes)
+        {
+            if (Valid(archetype.BitSet))
+            {
+                Matches.Add(archetype);
+                archetype.QueryMatches.Add(Matches);
+            }
+        }
     }
 
     /// <summary>
@@ -236,7 +243,7 @@ public readonly partial struct Query : IEquatable<Query>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public QueryArchetypeIterator GetArchetypeIterator()
     {
-        return new QueryArchetypeIterator(this, _archetypes.Span);
+        return new QueryArchetypeIterator(this, Matches.Span);
     }
 
     /// <summary>
@@ -246,7 +253,7 @@ public readonly partial struct Query : IEquatable<Query>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public QueryChunkIterator GetChunkIterator()
     {
-        return new QueryChunkIterator(this, _archetypes.Span);
+        return new QueryChunkIterator(this, Matches.Span);
     }
 
     /// <summary>
@@ -255,7 +262,7 @@ public readonly partial struct Query : IEquatable<Query>
     /// <returns>A new instance of the <see cref="QueryChunkIterator"/>.</returns>
     public QueryChunkEnumerator GetEnumerator()
     {
-        return new QueryChunkEnumerator(this, _archetypes.Span);
+        return new QueryChunkEnumerator(this, Matches.Span);
     }
 
     /// <summary>
