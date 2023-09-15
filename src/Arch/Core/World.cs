@@ -541,6 +541,8 @@ public partial class World
         Capacity += archetype.EntitiesPerChunk;
         EntityInfo.EnsureCapacity(Capacity);
 
+        ArchetypeAdded(archetype);
+
         return archetype;
     }
 
@@ -616,6 +618,7 @@ public partial class World
 
         archetype.Clear();
         Capacity -= archetype.EntitiesPerChunk;
+        ArchetypeRemoved(archetype);
     }
 }
 
