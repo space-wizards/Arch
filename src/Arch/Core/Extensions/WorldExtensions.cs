@@ -35,7 +35,7 @@ public static class WorldExtensions
             ref var entityFirstElement = ref chunk.Entity(0);
             foreach(var entityIndex in chunk)
             {
-                ref readonly var entity = ref Unsafe.Add(ref entityFirstElement, entityIndex);
+                var entity = Unsafe.Add(ref entityFirstElement, entityIndex);
                 list.Add(entity);
             }
         }

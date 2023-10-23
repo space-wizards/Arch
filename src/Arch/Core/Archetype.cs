@@ -1,6 +1,7 @@
 using System.Buffers;
 using Arch.Core.Extensions.Internal;
 using Arch.Core.Utils;
+using Arch.LowLevel.Jagged;
 using Collections.Pooled;
 
 namespace Arch.Core;
@@ -153,7 +154,8 @@ public sealed partial class Archetype
         Size = 1;
         Capacity = 1;
 
-        _addEdges = new ArrayDictionary<Archetype>(EdgesArrayMaxSize);
+        _addEdges = new SparseJaggedArray<Archetype>(BucketSize);
+        _removeEdges = new SparseJaggedArray<Archetype>(BucketSize);
     }
 
     /// <summary>
@@ -236,7 +238,7 @@ public sealed partial class Archetype
         get;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private set;
+        internal set;
     }
 
     /// <summary>
