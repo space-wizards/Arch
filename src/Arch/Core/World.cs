@@ -1334,6 +1334,13 @@ public partial class World
         return EntityInfo.Has(entity.Id);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Pure]
+    public bool IsAlive(EntityReference entReference)
+    {
+        return EntityInfo.TryGetVersion(entReference.Entity.Id, out var version) && version == entReference.Version;
+    }
+
     /// <summary>
     ///     Returns the version of an <see cref="Entity"/>.
     ///     Indicating how often it was recycled.
