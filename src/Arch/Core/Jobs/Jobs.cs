@@ -90,8 +90,8 @@ public struct ForEachJob : IChunkJob
         ref var entityFirstElement = ref chunk.Entity(0);
         foreach(var entityIndex in chunk)
         {
-            var entity = Unsafe.Add(ref entityFirstElement, entityIndex);
-            ForEach(entity);
+            ref readonly var entity = ref Unsafe.Add(ref entityFirstElement, entityIndex);
+            ForEach(in entity);
         }
     }
 }
@@ -121,8 +121,8 @@ public struct IForEachJob<T> : IChunkJob where T : IForEach
         ref var entityFirstElement = ref chunk.Entity(0);
         foreach(var entityIndex in chunk)
         {
-            var entity = Unsafe.Add(ref entityFirstElement, entityIndex);
-            ForEach.Update(entity);
+            ref readonly var entity = ref Unsafe.Add(ref entityFirstElement, entityIndex);
+            ForEach.Update(in entity);
         }
     }
 }

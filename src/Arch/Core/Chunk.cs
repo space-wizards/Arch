@@ -43,7 +43,7 @@ public partial struct Chunk
         for (var index = 0; index < types.Length; index++)
         {
             var type = types[index];
-            Components[index] = ArrayRegistry.GetArray(type, Capacity);
+            Components[index] = Array.CreateInstance(type, Capacity);
         }
     }
 

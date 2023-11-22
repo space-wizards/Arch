@@ -61,7 +61,7 @@ public static class StringBuilderHpQueryExtensions
         var generics = new List<string>();
         var parameters = new List<string>
         {
-            "Entity entity"
+            "in Entity entity"
         };
 
         for (var index = 0; index <= amount; index++)
@@ -166,9 +166,9 @@ public static class StringBuilderHpQueryExtensions
 
                         foreach(var entityIndex in chunk)
                         {
-                            var entity = Unsafe.Add(ref entityFirstElement, entityIndex);
+                            ref readonly var entity = ref Unsafe.Add(ref entityFirstElement, entityIndex);
                             {{getComponents}}
-                            iForEach.Update(entity, {{insertParams}});
+                            iForEach.Update(in entity, {{insertParams}});
                         }
                     }
                 }
@@ -201,9 +201,9 @@ public static class StringBuilderHpQueryExtensions
 
                         foreach (var entityIndex in chunk)
                         {
-                            var entity = Unsafe.Add(ref entityFirstElement, entityIndex);
+                            ref readonly var entity = ref Unsafe.Add(ref entityFirstElement, entityIndex);
                             {{getComponents}}
-                            t.Update(entity, {{insertParams}});
+                            t.Update(in entity, {{insertParams}});
                         }
                     }
                 }

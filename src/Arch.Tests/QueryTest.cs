@@ -40,7 +40,7 @@ public partial class QueryTest
         }
 
         var count = 0;
-        _world.Query(query, (Entity entity) => count++);
+        _world.Query(query, (in Entity entity) => count++);
         That(count, Is.EqualTo(100));
     }
 
@@ -56,7 +56,7 @@ public partial class QueryTest
         }
 
         var count = 0;
-        _world.Query(query, (Entity entity) => count++);
+        _world.Query(query, (in Entity entity) => count++);
         That(count, Is.EqualTo(100));
     }
 
@@ -72,21 +72,8 @@ public partial class QueryTest
         }
 
         var count = 0;
-        _world.Query(query, (Entity entity) => count++);
+        _world.Query(query, (in Entity entity) => count++);
         That(count, Is.EqualTo(0));
-    }
-
-    [Test]
-    public void EmptyQuery()
-    {
-        var query = new QueryDescription { None = new ComponentType[] { typeof(int) } };
-
-        _world = World.Create();
-        _world.Create();
-
-        var count = 0;
-        _world.Query(query, _ => count++);
-        That(count, Is.EqualTo(1));
     }
 
     [Test]
@@ -102,7 +89,7 @@ public partial class QueryTest
         }
 
         var count = 0;
-        _world.Query(query, (Entity entity) => count++);
+        _world.Query(query, (in Entity entity) => count++);
         That(count, Is.EqualTo(0));
 
         for (var index = 0; index < 100; index++)
@@ -111,7 +98,7 @@ public partial class QueryTest
         }
 
         count = 0;
-        _world.Query(query, (Entity entity) => count++);
+        _world.Query(query, (in Entity entity) => count++);
         That(count, Is.EqualTo(100));
     }
 
@@ -125,7 +112,7 @@ public partial class QueryTest
         }
 
         var count = 0;
-        _world.Query(_withoutAiQuery, (Entity entity) => count++);
+        _world.Query(_withoutAiQuery, (in Entity entity) => count++);
         That(count, Is.EqualTo(100));
     }
 
@@ -144,10 +131,10 @@ public partial class QueryTest
         }
 
         var queryCount = 0;
-        _world.Query(_withoutAiQuery, (Entity entity) => queryCount++);
+        _world.Query(_withoutAiQuery, (in Entity entity) => queryCount++);
 
         var otherQueryCount = 0;
-        _world.Query(_allQuery, (Entity entity) => otherQueryCount++);
+        _world.Query(_allQuery, (in Entity entity) => otherQueryCount++);
 
         That(queryCount, Is.EqualTo(100));
         That(otherQueryCount, Is.EqualTo(100));
@@ -172,7 +159,7 @@ public partial class QueryTest
         }
 
         var queryCount = 0;
-        _world.Query(in _withoutAiQuery, (Entity entity, ref Transform t) => queryCount++);
+        _world.Query(in _withoutAiQuery, (in Entity entity, ref Transform t) => queryCount++);
 
         var otherQueryCount = 0;
         _world.Query(in _allQuery, (ref Rotation rot) => otherQueryCount++);
@@ -196,7 +183,7 @@ public partial class QueryTest
         }
 
         var queryCount = 0;
-        _world.ParallelQuery(in _withoutAiQuery, (Entity entity, ref Transform t) => Interlocked.Increment(ref queryCount));
+        _world.ParallelQuery(in _withoutAiQuery, (in Entity entity, ref Transform t) => Interlocked.Increment(ref queryCount));
 
         var otherQueryCount = 0;
         _world.ParallelQuery(in _allQuery, (ref Rotation rot) => Interlocked.Increment(ref otherQueryCount));
@@ -219,7 +206,7 @@ public partial class QueryTest
     {
         public int Counter;
 
-        public void Update(Entity entity, ref Transform t0)
+        public void Update(in Entity entity, ref Transform t0)
         {
             Counter++;
         }

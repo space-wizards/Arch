@@ -48,7 +48,7 @@ public interface IForEach
     /// </summary>
     /// <param name="entity">The <see cref="Entity"/>.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update(Entity entity);
+    public void Update(in Entity entity);
 }
 
 /// <summary>
@@ -56,7 +56,7 @@ public interface IForEach
 ///     provides a callback to execute logic on an <see cref="Entity"/>.
 /// </summary>
 /// <param name="entity">The <see cref="Entity"/>.</param>
-public delegate void ForEach(Entity entity);
+public delegate void ForEach(in Entity entity);
 
 // Static world, create and destroy
 
@@ -433,7 +433,7 @@ public partial class World : IDisposable
             ref var entityFirstElement = ref chunk.Entity(0);
             foreach(var entityIndex in chunk)
             {
-                var entity = Unsafe.Add(ref entityFirstElement, entityIndex);
+                ref readonly var entity = ref Unsafe.Add(ref entityFirstElement, entityIndex);
                 list[start+index] = entity;
                 index++;
             }
@@ -613,7 +613,7 @@ public partial class World
         // Remove archetype from other archetypes edges.
         foreach (var otherArchetype in this)
         {
-            otherArchetype.RemoveEdge(archetype);
+            otherArchetype.RemoveAddEdge(archetype);
         }
 
         archetype.Clear();
@@ -640,7 +640,7 @@ public partial class World
             ref var entityLastElement = ref chunk.Entity(0);
             foreach(var entityIndex in chunk)
             {
-                var entity = Unsafe.Add(ref entityLastElement, entityIndex);
+                ref readonly var entity = ref Unsafe.Add(ref entityLastElement, entityIndex);
                 forEntity(entity);
             }
         }
@@ -663,8 +663,8 @@ public partial class World
             ref var entityFirstElement = ref chunk.Entity(0);
             foreach (var entityIndex in chunk)
             {
-                var entity = Unsafe.Add(ref entityFirstElement, entityIndex);
-                t.Update(entity);
+                ref readonly var entity = ref Unsafe.Add(ref entityFirstElement, entityIndex);
+                t.Update(in entity);
             }
         }
     }
@@ -685,8 +685,8 @@ public partial class World
             ref var entityFirstElement = ref chunk.Entity(0);
             foreach(var entityIndex in chunk)
             {
-                var entity = Unsafe.Add(ref entityFirstElement, entityIndex);
-                iForEach.Update(entity);
+                ref readonly var entity = ref Unsafe.Add(ref entityFirstElement, entityIndex);
+                iForEach.Update(in entity);
             }
         }
     }
@@ -716,7 +716,7 @@ public partial class World
                 ref var entityFirstElement = ref chunk.Entity(0);
                 foreach (var index in chunk)
                 {
-                    var entity = Unsafe.Add(ref entityFirstElement, index);
+                    ref readonly var entity = ref Unsafe.Add(ref entityFirstElement, index);
                     OnEntityDestroyed(entity);
 
                     var version = EntityInfo.GetVersion(entity.Id);
@@ -968,7 +968,7 @@ public partial class World
     }
 
     /// <summary>
-    ///     Adds a new component to the <see cref="Entity"/> and moves it to the new <see cref="Archetype"/>.
+    ///     Adds an new component to the <see cref="Entity"/> and moves it to the new <see cref="Archetype"/>.
     /// </summary>
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="newArchetype">The entity's new <see cref="Archetype"/>.</param>
@@ -980,13 +980,13 @@ public partial class World
     {
         var oldArchetype = EntityInfo.GetArchetype(entity.Id);
         var type = Component<T>.ComponentType;
-        newArchetype = GetOrCreateArchetypeByAddEdge(in type, oldArchetype);
+        newArchetype = GetOrCreateArchetypeByEdge(in type, oldArchetype);
 
         Move(entity, oldArchetype, newArchetype, out slot);
     }
 
     /// <summary>
-    ///     Adds a new component to the <see cref="Entity"/> and moves it to the new <see cref="Archetype"/>.
+    ///     Adds an new component to the <see cref="Entity"/> and moves it to the new <see cref="Archetype"/>.
     /// </summary>
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <typeparam name="T">The component type.</typeparam>
@@ -999,7 +999,7 @@ public partial class World
     }
 
     /// <summary>
-    ///     Adds a new component to the <see cref="Entity"/> and moves it to the new <see cref="Archetype"/>.
+    ///     Adds an new component to the <see cref="Entity"/> and moves it to the new <see cref="Archetype"/>.
     /// </summary>
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <typeparam name="T">The component type.</typeparam>
@@ -1023,8 +1023,20 @@ public partial class World
     public void Remove<T>(Entity entity)
     {
         var oldArchetype = EntityInfo.GetArchetype(entity.Id);
-        var type = Component<T>.ComponentType;
-        var newArchetype = GetOrCreateArchetypeByRemoveEdge(in type, oldArchetype);
+
+        // BitSet to stack/span bitset, size big enough to contain ALL registered components.
+        Span<uint> stack = stackalloc uint[oldArchetype.BitSet.Length];
+        oldArchetype.BitSet.AsSpan(stack);
+
+        // Create a span bitset, doing it local saves us headache and gargabe
+        var spanBitSet = new SpanBitSet(stack);
+        spanBitSet.ClearBit(Component<T>.ComponentType.Id);
+
+        // Search for fitting archetype or create a new one
+        if (!TryGetArchetype(spanBitSet.GetHashCode(), out var newArchetype))
+        {
+            newArchetype = GetOrCreate(oldArchetype.Types.Remove(typeof(T)));
+        }
 
         OnComponentRemoved<T>(entity);
         Move(entity, oldArchetype, newArchetype, out _);
@@ -1188,7 +1200,7 @@ public partial class World
     {
         var oldArchetype = EntityInfo.GetArchetype(entity.Id);
         var type = (ComponentType) cmp.GetType();
-        var newArchetype = GetOrCreateArchetypeByAddEdge(in type, oldArchetype);
+        var newArchetype = GetOrCreateArchetypeByEdge(in type, oldArchetype);
 
         Move(entity, oldArchetype, newArchetype, out var slot);
         newArchetype.Set(ref slot, cmp);

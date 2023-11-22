@@ -1,5 +1,3 @@
-using Arch.Core.Extensions.Internal;
-using Arch.LowLevel.Jagged;
 using Microsoft.Extensions.ObjectPool;
 
 namespace Arch.Core.Utils;
@@ -19,29 +17,33 @@ public readonly record struct ComponentType
     public readonly int Id;
 
     /// <summary>
+    ///     Its type.
+    /// </summary>
+    public readonly Type Type;
+
+    /// <summary>
     ///     Its size in bytes.
     /// </summary>
     public readonly int ByteSize;
 
     /// <summary>
+    ///     If its zero sized.
+    /// </summary>
+    public readonly bool ZeroSized;
+
+    /// <summary>
     ///     Initializes a new instance of the <see cref="ComponentType"/> struct.
     /// </summary>
     /// <param name="id">Its unique id.</param>
+    /// <param name="type">Its type.</param>
     /// <param name="byteSize">Its size in bytes.</param>
-    public ComponentType(int id, int byteSize)
+    /// <param name="zeroSized">True if its zero sized ( empty struct).</param>
+    public ComponentType(int id, Type type, int byteSize, bool zeroSized)
     {
         Id = id;
+        Type = type;
         ByteSize = byteSize;
-    }
-
-    /// <summary>
-    ///     Its <see cref="Type"/>, resolves the given <see cref="Id"/>.
-    ///     <remarks>The local <see cref="Id"/> is being resolved and acesses the <see cref="ComponentRegistry.Types"/> to return the <see cref="Type"/> for this <see cref="ComponentType"/>.</remarks>
-    /// </summary>
-    public Type Type
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => ComponentRegistry.Types[Id];
+        ZeroSized = zeroSized;
     }
 
     /// <summary>
@@ -76,34 +78,31 @@ public static class ComponentRegistry
     /// <summary>
     ///     All registered components, maps their <see cref="Type"/> to their <see cref="ComponentType"/>.
     /// </summary>
-    public static Dictionary<Type, ComponentType> TypeToComponentType
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get;
-    } = new(64);
+    private static readonly Dictionary<Type, ComponentType> _types = new(128);
 
     /// <summary>
-    ///     All registered components.
+    ///     All registered components mapped to their <see cref="Type"/> as a <see cref="Dictionary{TKey,TValue}"/>.
     /// </summary>
-    public static Type[] Types
+    public static Dictionary<Type, ComponentType> Types
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get;
+        get => _types;
+    }
 
+    /// <summary>
+    ///     TODO: Store array somewhere and update it to reduce allocations.
+    ///     All registered components as an <see cref="ComponentType"/> array.
+    /// </summary>
+    public static ComponentType[] TypesArray
+    {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private set;
-    } = new Type[64];
+        get => _types.Values.ToArray();
+    }
 
     /// <summary>
     ///     Gets or sets the total number of registered components in the project.
     /// </summary>
-    public static int Size
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private set;
-    }
+    public static int Size { get; private set; }
 
     /// <summary>
     ///     Adds a new <see cref="ComponentType"/> manually and registers it.
@@ -121,10 +120,8 @@ public static class ComponentRegistry
         }
 
         // Register and assign component id
-        var id = Size + 1;
-        meta = new ComponentType(id, typeSize);
-        TypeToComponentType.Add(type, meta);
-        Types.Add(id, type);
+        meta = new ComponentType(Size + 1, type, typeSize, type.GetFields().Length == 0);
+        _types.Add(type, meta);
 
         Size++;
         return meta;
@@ -139,12 +136,7 @@ public static class ComponentRegistry
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ComponentType Add(ComponentType type)
     {
-        // Register and assign component id
-        TypeToComponentType.Add(type, type);
-        Types.Add(type.Id, type.Type);
-
-        Size++;
-        return type;
+        return Add(type.Type, type.ByteSize);
     }
 
     /// <summary>
@@ -190,7 +182,7 @@ public static class ComponentRegistry
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Has(Type type)
     {
-        return TypeToComponentType.ContainsKey(type);
+        return _types.ContainsKey(type);
     }
 
     /// <summary>
@@ -201,9 +193,7 @@ public static class ComponentRegistry
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Remove<T>()
     {
-        var componentType = Component<T>.ComponentType;
-        Types[componentType.Id] = null;
-        return TypeToComponentType.Remove(componentType.Type);
+        return _types.Remove(typeof(T));
     }
 
     /// <summary>
@@ -214,9 +204,7 @@ public static class ComponentRegistry
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Remove(Type type)
     {
-        ComponentType componentType = type;
-        Types[componentType.Id] = null;
-        return TypeToComponentType.Remove(type);
+        return _types.Remove(type);
     }
 
     /// <summary>
@@ -228,9 +216,7 @@ public static class ComponentRegistry
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Remove(Type type, out ComponentType compType)
     {
-        var removed = TypeToComponentType.Remove(type, out compType);
-        Types[compType.Id] = null;
-        return removed;
+        return _types.Remove(type, out compType);
     }
 
     /// <summary>
@@ -244,10 +230,17 @@ public static class ComponentRegistry
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Replace(Type oldType, Type newType, int newTypeSize)
     {
-        var id = Remove(oldType, out var oldComponentType) ? oldComponentType.Id : ++Size;
+        var id = 0;
+        if (Remove(oldType, out var oldComponentType))
+        {
+            id = oldComponentType.Id;
+        }
+        else
+        {
+            id = ++Size;
+        }
 
-        TypeToComponentType.Add(newType, new ComponentType(id, newTypeSize));
-        Types.Add(id, newType);
+        _types.Add(newType, new ComponentType(id, newType, newTypeSize, newType.GetFields().Length == 0));
     }
 
     /// <summary>
@@ -297,7 +290,7 @@ public static class ComponentRegistry
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool TryGet(Type type, out ComponentType componentType)
     {
-        return TypeToComponentType.TryGetValue(type, out componentType);
+        return _types.TryGetValue(type, out componentType);
     }
 
     /// <summary>
@@ -308,7 +301,12 @@ public static class ComponentRegistry
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SizeOf<T>()
     {
-        return typeof(T).IsValueType ? Unsafe.SizeOf<T>() : IntPtr.Size;
+        if (typeof(T).IsValueType)
+        {
+            return Unsafe.SizeOf<T>();
+        }
+
+        return IntPtr.Size;
     }
 
     /// TODO: Check if this still AOT compatible?
@@ -329,43 +327,6 @@ public static class ComponentRegistry
         }
 
         return IntPtr.Size;
-    }
-}
-
-/// <summary>
-///     Tracks all registered arrays in the project. Allows to create arrays of a specific type without reflection at runtime, if they are registered.
-/// </summary>
-public static class ArrayRegistry
-{
-    private static readonly JaggedArray<Func<int, Array>> _createFactories = new(128);
-
-    /// <summary>
-    ///     Adds a new array type and registers it.
-    /// </summary>
-    /// <typeparam name="T">The type of the array.</typeparam>
-    public static void Add<T>()
-    {
-        _createFactories.Add(Component<T>.ComponentType.Id, ArrayFactory<T>.Create);
-    }
-
-    /// <summary>
-    ///     Gets an array of the specified type and capacity. Will use the registered factory if it exists, otherwise it will create a new array using reflection.
-    /// </summary>
-    /// <param name="type">The type of the array.</param>
-    /// <param name="capacity">The capacity of the array.</param>
-    /// <returns>The created array.</returns>
-    public static Array GetArray(ComponentType type, int capacity)
-    {
-        return _createFactories.TryGetValue(type.Id, out Func<int,Array> func) ? func(capacity) : Array.CreateInstance(type.Type, capacity);
-    }
-
-    /// <summary>
-    ///     An array factory that creates arrays of the specified type.
-    /// </summary>
-    /// <typeparam name="T">The type of the array.</typeparam>
-    private static class ArrayFactory<T>
-    {
-        public static readonly Func<int, Array> Create = capacity => capacity == 0 ? Array.Empty<T>() : new T[capacity];
     }
 }
 
