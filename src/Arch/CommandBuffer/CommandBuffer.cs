@@ -71,7 +71,7 @@ public class CommandBuffer : IDisposable
     ///     with the specified <see cref="Core.World"/> and an optional <paramref name="initialCapacity"/> (default: 128).
     /// </summary>
     /// <param name="world">The <see cref="World"/>.</param>
-    /// <param name="initialCapacity">The <see cref="initialCapacity"/>.</param>
+    /// <param name="initialCapacity">The initial capacity.</param>
     public CommandBuffer(World world, int initialCapacity = 128)
     {
         World = world;
@@ -177,7 +177,7 @@ public class CommandBuffer : IDisposable
     {
         lock (this)
         {
-            var entity = new Entity(-Math.Abs(Size - 1), World.Id);
+            var entity = new Entity(-(Size + 1), World.Id);
             Register(entity, out _);
 
             var command = new CreateCommand(Size - 1, types);
@@ -215,7 +215,7 @@ public class CommandBuffer : IDisposable
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="component">The component value.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Set<T>(in Entity entity, in T component = default)
+    public void Set<T>(in Entity entity, in T? component = default)
     {
         BufferedEntityInfo info;
         lock (this)
@@ -238,7 +238,7 @@ public class CommandBuffer : IDisposable
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="component">The component value.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Add<T>(in Entity entity, in T component = default)
+    public void Add<T>(in Entity entity, in T? component = default)
     {
         BufferedEntityInfo info;
         lock (this)
@@ -277,6 +277,7 @@ public class CommandBuffer : IDisposable
     /// <summary>
     ///     Adds an list of new components to the <see cref="Entity"/> and moves it to the new <see cref="Archetype"/>.
     /// </summary>
+    /// <param name="world">The world to operate on.</param>
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="components">A <see cref="IList{T}"/> of <see cref="ComponentType"/>'s, those are added to the <see cref="Entity"/>.</param>
     [SkipLocalsInit]
@@ -424,7 +425,6 @@ public class CommandBuffer : IDisposable
             _removeTypes.Clear();
         }
 
-
         // Play back destructions.
         foreach (var cmd in Destroys)
         {
@@ -433,15 +433,15 @@ public class CommandBuffer : IDisposable
 
         // Reset values.
         Size = 0;
-        Entities?.Clear();
-        BufferedEntityInfo?.Clear();
-        Creates?.Clear();
-        Sets?.Clear();
-        Adds?.Clear();
-        Removes?.Clear();
-        Destroys?.Clear();
-        _addTypes?.Clear();
-        _removeTypes?.Clear();
+        Entities.Clear();
+        BufferedEntityInfo.Clear();
+        Creates.Clear();
+        Sets.Clear();
+        Adds.Clear();
+        Removes.Clear();
+        Destroys.Clear();
+        _addTypes.Clear();
+        _removeTypes.Clear();
     }
 
     /// <summary>
@@ -449,14 +449,15 @@ public class CommandBuffer : IDisposable
     /// </summary>
     public void Dispose()
     {
-        Entities?.Dispose();
-        BufferedEntityInfo?.Dispose();
-        Creates?.Clear();
-        Sets?.Clear();
-        Adds?.Clear();
-        Removes?.Clear();
-        Destroys?.Dispose();
-        _addTypes?.Dispose();
-        _removeTypes?.Dispose();
+        Entities.Dispose();
+        BufferedEntityInfo.Dispose();
+        Creates.Clear();
+        Sets.Clear();
+        Adds.Clear();
+        Removes.Clear();
+        Destroys.Dispose();
+        _addTypes.Dispose();
+        _removeTypes.Dispose();
+        GC.SuppressFinalize(this);
     }
 }
