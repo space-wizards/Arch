@@ -1,7 +1,6 @@
 using System.Buffers;
 using Arch.Core.Extensions.Internal;
 using Arch.Core.Utils;
-using Arch.LowLevel.Jagged;
 using Collections.Pooled;
 
 namespace Arch.Core;
@@ -154,8 +153,7 @@ public sealed partial class Archetype
         Size = 1;
         Capacity = 1;
 
-        _addEdges = new SparseJaggedArray<Archetype>(BucketSize);
-        _removeEdges = new SparseJaggedArray<Archetype>(BucketSize);
+        _addEdges = new ArrayDictionary<Archetype>(EdgesArrayMaxSize);
     }
 
     /// <summary>
@@ -238,7 +236,7 @@ public sealed partial class Archetype
         get;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal set;
+        private set;
     }
 
     /// <summary>
@@ -316,7 +314,7 @@ public sealed partial class Archetype
     /// <param name="slot">The <see cref="Slot"/> at which the component of an <see cref="Arch.Core.Entity"/> is to be set or replaced.</param>
     /// <param name="cmp">The component value.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal void Set<T>(ref Slot slot, in T? cmp)
+    internal void Set<T>(ref Slot slot, in T cmp)
     {
         ref var chunk = ref GetChunk(slot.ChunkIndex);
         chunk.Set(slot.Index, in cmp);
@@ -379,7 +377,7 @@ public sealed partial class Archetype
     /// <param name="component">The component value.</param>
     /// <typeparam name="T">The component type.</typeparam>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal void SetRange<T>(in Slot from, in Slot to, in T? component = default)
+    internal void SetRange<T>(in Slot from, in Slot to, in T component = default)
     {
         // Set the added component, start from the last slot and move down
         for (var chunkIndex = from.ChunkIndex; chunkIndex >= to.ChunkIndex; --chunkIndex)
@@ -409,7 +407,7 @@ public sealed partial class Archetype
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Enumerator<Chunk> GetEnumerator()
     {
-        return new Enumerator<Chunk>(Chunks.AsSpan(0, Size));
+        return new Enumerator<Chunk>(Chunks.AsSpan(), Size);
     }
 
     /// <summary>
@@ -493,7 +491,7 @@ public sealed unsafe partial class Archetype
     /// <param name="slot">The <see cref="Slot"/>.</param>
     /// <returns>A reference to the component.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal object? Get(scoped ref Slot slot, ComponentType type)
+    internal object Get(scoped ref Slot slot, ComponentType type)
     {
         ref var chunk = ref GetChunk(slot.ChunkIndex);
         return chunk.Get(slot.Index, type);
@@ -685,7 +683,6 @@ public sealed partial class Archetype
     /// <summary>
     ///     Copies an <see cref="Arch.Core.Entity"/> and all its components from a <see cref="Slot"/> within this <see cref="Archetype"/> to a <see cref="Slot"/> within another <see cref="Archetype"/> .
     /// </summary>
-    /// <param name="from">The <see cref="Archetype"/> from which the <see cref="Arch.Core.Entity"/> should move.</param>
     /// <param name="to">The <see cref="Archetype"/> into which the <see cref="Arch.Core.Entity"/> should move.</param>
     /// <param name="fromSlot">The <see cref="Slot"/> that targets the <see cref="Arch.Core.Entity"/> that should move.</param>
     /// <param name="toSlot">The <see cref="Slot"/> to which the <see cref="Arch.Core.Entity"/> should move.</param>

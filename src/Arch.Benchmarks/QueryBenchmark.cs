@@ -33,7 +33,7 @@ public class QueryBenchmark
     [Benchmark]
     public void WorldEntityQuery()
     {
-        _world.Query(in _queryDescription, static (Entity entity) =>
+        _world.Query(in _queryDescription, static (in Entity entity) =>
         {
             var refs = _world.Get<Transform, Velocity>(entity);
 
@@ -46,15 +46,16 @@ public class QueryBenchmark
     [Benchmark]
     public void EntityExtensionQuery()
     {
-        _world.Query(in _queryDescription, (Entity entity) =>
+        _world.Query(in _queryDescription, (in Entity entity) =>
         {
             var refs = entity.Get<Transform, Velocity>();
+
             refs.t0.X += refs.t1.X;
             refs.t0.Y += refs.t1.Y;
         });
     }
 #endif
-
+/*
     [Benchmark]
     public void Query()
     {
@@ -68,7 +69,7 @@ public class QueryBenchmark
     [Benchmark]
     public void EntityQuery()
     {
-        _world.Query(in _queryDescription, (Entity entity, ref Transform t, ref Velocity v) =>
+        _world.Query(in _queryDescription, (in Entity entity, ref Transform t, ref Velocity v) =>
         {
             t.X += v.X;
             t.Y += v.Y;
@@ -120,10 +121,10 @@ public class QueryBenchmark
     public struct VelocityEntityUpdate : IForEachWithEntity<Transform, Velocity>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Update(Entity entity, ref Transform t, ref Velocity v)
+        public void Update(in Entity entity, ref Transform t, ref Velocity v)
         {
             t.X += v.X;
             t.Y += v.Y;
         }
-    }
+    }*/
 }

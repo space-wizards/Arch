@@ -43,7 +43,7 @@ public static class StringBuilderQueryExtensions
 
         var template =
             $$"""
-            public delegate void ForEachWithEntity<{{generics}}>(Entity entity, {{parameters}});
+            public delegate void ForEachWithEntity<{{generics}}>(in Entity entity, {{parameters}});
             """;
 
         sb.Append(template);
@@ -120,9 +120,9 @@ public static class StringBuilderQueryExtensions
 
                     foreach(var entityIndex in chunk)
                     {
-                        var entity = Unsafe.Add(ref entityFirstElement, entityIndex);
+                        ref readonly var entity = ref Unsafe.Add(ref entityFirstElement, entityIndex);
                         {{getComponents}}
-                        forEach(entity, {{insertParams}});
+                        forEach(in entity, {{insertParams}});
                     }
                 }
             }
