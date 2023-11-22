@@ -27,7 +27,6 @@ public static class CreateExtensions
         var template =
             $$"""
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            [StructuralChange]
             public Entity Create<{{generics}}>({{parameters}})
             {
                 var types = Group<{{generics}}>.Types;

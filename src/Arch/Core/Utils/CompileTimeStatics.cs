@@ -70,33 +70,29 @@ public readonly record struct ComponentType
 ///     The <see cref="ComponentRegistry"/> class, tracks all used components in the project.
 ///     Those are represented by <see cref="ComponentType"/>'s.
 /// </summary>
-/// <remarks>
-///     Simultaneous readers are supported, but simultaneous readers and writers are not.
-///     Ensure that modification happens on an isolated thread.
-///     In <see cref="World"/> this is implemented via marked structural-change methods.
-/// </remarks>
 public static class ComponentRegistry
 {
-    private static readonly Dictionary<Type, ComponentType> _typeToComponentType = new(64);
-    private static Type?[] _types = new Type[64];
 
     /// <summary>
     ///     All registered components, maps their <see cref="Type"/> to their <see cref="ComponentType"/>.
     /// </summary>
-    public static IReadOnlyDictionary<Type, ComponentType> TypeToComponentType
+    public static Dictionary<Type, ComponentType> TypeToComponentType
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _typeToComponentType;
-    }
+        get;
+    } = new(64);
 
     /// <summary>
     ///     All registered components.
     /// </summary>
-    public static ReadOnlySpan<Type?> Types
+    public static Type[] Types
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _types;
-    }
+        get;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private set;
+    } = new Type[64];
 
     /// <summary>
     ///     Gets or sets the total number of registered components in the project.
@@ -127,8 +123,8 @@ public static class ComponentRegistry
         // Register and assign component id
         var id = Size + 1;
         meta = new ComponentType(id, typeSize);
-        _typeToComponentType.Add(type, meta);
-        _types = _types.Add(id, type);
+        TypeToComponentType.Add(type, meta);
+        Types.Add(id, type);
 
         Size++;
         return meta;
@@ -144,8 +140,8 @@ public static class ComponentRegistry
     public static ComponentType Add(ComponentType type)
     {
         // Register and assign component id
-        _typeToComponentType.Add(type, type);
-        _types = _types.Add(type.Id, type.Type);
+        TypeToComponentType.Add(type, type);
+        Types.Add(type.Id, type.Type);
 
         Size++;
         return type;
@@ -206,8 +202,8 @@ public static class ComponentRegistry
     public static bool Remove<T>()
     {
         var componentType = Component<T>.ComponentType;
-        _types[componentType.Id] = null;
-        return _typeToComponentType.Remove(componentType.Type);
+        Types[componentType.Id] = null;
+        return TypeToComponentType.Remove(componentType.Type);
     }
 
     /// <summary>
@@ -219,8 +215,8 @@ public static class ComponentRegistry
     public static bool Remove(Type type)
     {
         ComponentType componentType = type;
-        _types[componentType.Id] = null;
-        return _typeToComponentType.Remove(type);
+        Types[componentType.Id] = null;
+        return TypeToComponentType.Remove(type);
     }
 
     /// <summary>
@@ -232,8 +228,8 @@ public static class ComponentRegistry
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Remove(Type type, out ComponentType compType)
     {
-        var removed = _typeToComponentType.Remove(type, out compType);
-        _types[compType.Id] = null;
+        var removed = TypeToComponentType.Remove(type, out compType);
+        Types[compType.Id] = null;
         return removed;
     }
 
@@ -250,8 +246,8 @@ public static class ComponentRegistry
     {
         var id = Remove(oldType, out var oldComponentType) ? oldComponentType.Id : ++Size;
 
-        _typeToComponentType.Add(newType, new ComponentType(id, newTypeSize));
-        _types = _types.Add(id, newType);
+        TypeToComponentType.Add(newType, new ComponentType(id, newTypeSize));
+        Types.Add(id, newType);
     }
 
     /// <summary>
@@ -326,7 +322,7 @@ public static class ComponentRegistry
     {
         if (type.IsValueType)
         {
-            return (int)typeof(Unsafe)
+            return (int) typeof(Unsafe)
                 .GetMethod(nameof(Unsafe.SizeOf))!
                 .MakeGenericMethod(type)
                 .Invoke(null, null)!;
@@ -360,7 +356,7 @@ public static class ArrayRegistry
     /// <returns>The created array.</returns>
     public static Array GetArray(ComponentType type, int capacity)
     {
-        return _createFactories.TryGetValue(type.Id, out Func<int, Array> func) ? func(capacity) : Array.CreateInstance(type.Type, capacity);
+        return _createFactories.TryGetValue(type.Id, out Func<int,Array> func) ? func(capacity) : Array.CreateInstance(type.Type, capacity);
     }
 
     /// <summary>
@@ -410,9 +406,6 @@ public static class Component
     /// <summary>
     ///     Searches a <see cref="ComponentType"/> by its <see cref="Type"/>. If it does not exist, it will be added.
     /// </summary>
-    /// <remarks>
-    ///     Not thread-safe; ensure no other threads are accessing or modifying the <see cref="ComponentRegistry"/>.
-    /// </remarks>
     /// <param name="type">The <see cref="Type"/>.</param>
     /// <returns>The <see cref="ComponentType"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -442,7 +435,7 @@ public static class Component
           }
 
           // Allocate the stack and set bits to replicate a bitset
-          var length = BitSet.RequiredLength(highestId + 1);
+          var length = BitSet.RequiredLength(highestId);
           Span<uint> stack = stackalloc uint[length];
           var spanBitSet = new SpanBitSet(stack);
 
@@ -455,12 +448,17 @@ public static class Component
           return GetHashCode(stack);
     }
 
+    /// <summary>
+    ///     Calculates the hash code of a bitset span, which is unique for the elements contained in the array.
+    ///     The order of the elements does not change the hashcode, so it depends on the elements themselves.
+    /// </summary>
+    /// <param name="obj">The <see cref="BitSet"/>.</param>
+    /// <returns>A unique hashcode for the contained elements, regardless of their order.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int GetHashCode(Span<uint> span)
     {
-        var hashCode = new HashCode();
-        hashCode.AddSpan(span);
-        return hashCode.ToHashCode();
+        var bytes = MemoryMarshal.AsBytes(span);
+        return (int)MurmurHash3.Hash32(bytes, 0);
     }
 }
 
@@ -514,9 +512,7 @@ public static class JobMeta<T> where T : class, new()
 // TODO: Based on the hash of each `Group` we can easily Map a `Group<T, T, T, ...>` to another `Group`.
 //       E.g.: `Group<int, byte>` to `Group<byte, int>`, as they return the same hash.
 /// <summary>
-///     The <see cref="Group"/> class counts the IDs of registered <see cref="ComponentType"/> groups in an compile-time static way,
-///     and stores an underlying array for dynamic access. In this way, its related classes (<see cref="Group{T0}"/>, <see cref="Group{T0, T1}"/>...)
-///     can be used to statically track sets of components from generic calls with zero overhead.
+///     The <see cref="Group"/> class counts the Ids of registered groups in an compiletime static way.
 /// </summary>
 public static class Group
 {

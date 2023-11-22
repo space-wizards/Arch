@@ -31,7 +31,6 @@ public static class StructuralChangesExtensions
             $$"""
             [SkipLocalsInit]
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            [StructuralChange]
             public void Add<{{generics}}>(Entity entity, {{parameters}})
             {
                 var oldArchetype = EntityInfo.GetArchetype(entity.Id);
@@ -83,7 +82,6 @@ public static class StructuralChangesExtensions
             $$"""
             [SkipLocalsInit]
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            [StructuralChange]
             public void Remove<{{generics}}>(Entity entity)
             {
                 var oldArchetype = EntityInfo.GetArchetype(entity.Id);
