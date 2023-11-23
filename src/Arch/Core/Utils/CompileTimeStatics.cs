@@ -1,3 +1,5 @@
+using Arch.Core.Extensions.Internal;
+using Arch.LowLevel.Jagged;
 using Microsoft.Extensions.ObjectPool;
 
 namespace Arch.Core.Utils;
@@ -17,33 +19,29 @@ public readonly record struct ComponentType
     public readonly int Id;
 
     /// <summary>
-    ///     Its type.
-    /// </summary>
-    public readonly Type Type;
-
-    /// <summary>
     ///     Its size in bytes.
     /// </summary>
     public readonly int ByteSize;
 
     /// <summary>
-    ///     If its zero sized.
-    /// </summary>
-    public readonly bool ZeroSized;
-
-    /// <summary>
     ///     Initializes a new instance of the <see cref="ComponentType"/> struct.
     /// </summary>
     /// <param name="id">Its unique id.</param>
-    /// <param name="type">Its type.</param>
     /// <param name="byteSize">Its size in bytes.</param>
-    /// <param name="zeroSized">True if its zero sized ( empty struct).</param>
-    public ComponentType(int id, Type type, int byteSize, bool zeroSized)
+    public ComponentType(int id, int byteSize)
     {
         Id = id;
-        Type = type;
         ByteSize = byteSize;
-        ZeroSized = zeroSized;
+    }
+
+    /// <summary>
+    ///     Its <see cref="Type"/>, resolves the given <see cref="Id"/>.
+    ///     <remarks>The local <see cref="Id"/> is being resolved and acesses the <see cref="ComponentRegistry.Types"/> to return the <see cref="Type"/> for this <see cref="ComponentType"/>.</remarks>
+    /// </summary>
+    public Type Type
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => ComponentRegistry.Types[Id];
     }
 
     /// <summary>
@@ -72,37 +70,44 @@ public readonly record struct ComponentType
 ///     The <see cref="ComponentRegistry"/> class, tracks all used components in the project.
 ///     Those are represented by <see cref="ComponentType"/>'s.
 /// </summary>
+/// <remarks>
+///     Simultaneous readers are supported, but simultaneous readers and writers are not.
+///     Ensure that modification happens on an isolated thread.
+///     In <see cref="World"/> this is implemented via marked structural-change methods.
+/// </remarks>
 public static class ComponentRegistry
 {
+    private static readonly Dictionary<Type, ComponentType> _typeToComponentType = new(64);
+    private static Type?[] _types = new Type[64];
 
     /// <summary>
     ///     All registered components, maps their <see cref="Type"/> to their <see cref="ComponentType"/>.
     /// </summary>
-    private static readonly Dictionary<Type, ComponentType> _types = new(128);
+    public static IReadOnlyDictionary<Type, ComponentType> TypeToComponentType
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _typeToComponentType;
+    }
 
     /// <summary>
-    ///     All registered components mapped to their <see cref="Type"/> as a <see cref="Dictionary{TKey,TValue}"/>.
+    ///     All registered components.
     /// </summary>
-    public static Dictionary<Type, ComponentType> Types
+    public static ReadOnlySpan<Type?> Types
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _types;
     }
 
     /// <summary>
-    ///     TODO: Store array somewhere and update it to reduce allocations.
-    ///     All registered components as an <see cref="ComponentType"/> array.
-    /// </summary>
-    public static ComponentType[] TypesArray
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _types.Values.ToArray();
-    }
-
-    /// <summary>
     ///     Gets or sets the total number of registered components in the project.
     /// </summary>
-    public static int Size { get; private set; }
+    public static int Size
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private set;
+    }
 
     /// <summary>
     ///     Adds a new <see cref="ComponentType"/> manually and registers it.
@@ -120,8 +125,10 @@ public static class ComponentRegistry
         }
 
         // Register and assign component id
-        meta = new ComponentType(Size + 1, type, typeSize, type.GetFields().Length == 0);
-        _types.Add(type, meta);
+        var id = Size + 1;
+        meta = new ComponentType(id, typeSize);
+        _typeToComponentType.Add(type, meta);
+        _types = _types.Add(id, type);
 
         Size++;
         return meta;
@@ -136,7 +143,12 @@ public static class ComponentRegistry
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ComponentType Add(ComponentType type)
     {
-        return Add(type.Type, type.ByteSize);
+        // Register and assign component id
+        _typeToComponentType.Add(type, type);
+        _types = _types.Add(type.Id, type.Type);
+
+        Size++;
+        return type;
     }
 
     /// <summary>
@@ -182,7 +194,7 @@ public static class ComponentRegistry
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Has(Type type)
     {
-        return _types.ContainsKey(type);
+        return TypeToComponentType.ContainsKey(type);
     }
 
     /// <summary>
@@ -193,7 +205,9 @@ public static class ComponentRegistry
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Remove<T>()
     {
-        return _types.Remove(typeof(T));
+        var componentType = Component<T>.ComponentType;
+        _types[componentType.Id] = null;
+        return _typeToComponentType.Remove(componentType.Type);
     }
 
     /// <summary>
@@ -204,7 +218,9 @@ public static class ComponentRegistry
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Remove(Type type)
     {
-        return _types.Remove(type);
+        ComponentType componentType = type;
+        _types[componentType.Id] = null;
+        return _typeToComponentType.Remove(type);
     }
 
     /// <summary>
@@ -216,7 +232,9 @@ public static class ComponentRegistry
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Remove(Type type, out ComponentType compType)
     {
-        return _types.Remove(type, out compType);
+        var removed = _typeToComponentType.Remove(type, out compType);
+        _types[compType.Id] = null;
+        return removed;
     }
 
     /// <summary>
@@ -230,17 +248,10 @@ public static class ComponentRegistry
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Replace(Type oldType, Type newType, int newTypeSize)
     {
-        var id = 0;
-        if (Remove(oldType, out var oldComponentType))
-        {
-            id = oldComponentType.Id;
-        }
-        else
-        {
-            id = ++Size;
-        }
+        var id = Remove(oldType, out var oldComponentType) ? oldComponentType.Id : ++Size;
 
-        _types.Add(newType, new ComponentType(id, newType, newTypeSize, newType.GetFields().Length == 0));
+        _typeToComponentType.Add(newType, new ComponentType(id, newTypeSize));
+        _types = _types.Add(id, newType);
     }
 
     /// <summary>
@@ -290,7 +301,7 @@ public static class ComponentRegistry
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool TryGet(Type type, out ComponentType componentType)
     {
-        return _types.TryGetValue(type, out componentType);
+        return TypeToComponentType.TryGetValue(type, out componentType);
     }
 
     /// <summary>
@@ -301,12 +312,7 @@ public static class ComponentRegistry
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SizeOf<T>()
     {
-        if (typeof(T).IsValueType)
-        {
-            return Unsafe.SizeOf<T>();
-        }
-
-        return IntPtr.Size;
+        return typeof(T).IsValueType ? Unsafe.SizeOf<T>() : IntPtr.Size;
     }
 
     /// TODO: Check if this still AOT compatible?
@@ -320,13 +326,50 @@ public static class ComponentRegistry
     {
         if (type.IsValueType)
         {
-            return (int) typeof(Unsafe)
+            return (int)typeof(Unsafe)
                 .GetMethod(nameof(Unsafe.SizeOf))!
                 .MakeGenericMethod(type)
                 .Invoke(null, null)!;
         }
 
         return IntPtr.Size;
+    }
+}
+
+/// <summary>
+///     Tracks all registered arrays in the project. Allows to create arrays of a specific type without reflection at runtime, if they are registered.
+/// </summary>
+public static class ArrayRegistry
+{
+    private static readonly JaggedArray<Func<int, Array>> _createFactories = new(128);
+
+    /// <summary>
+    ///     Adds a new array type and registers it.
+    /// </summary>
+    /// <typeparam name="T">The type of the array.</typeparam>
+    public static void Add<T>()
+    {
+        _createFactories.Add(Component<T>.ComponentType.Id, ArrayFactory<T>.Create);
+    }
+
+    /// <summary>
+    ///     Gets an array of the specified type and capacity. Will use the registered factory if it exists, otherwise it will create a new array using reflection.
+    /// </summary>
+    /// <param name="type">The type of the array.</param>
+    /// <param name="capacity">The capacity of the array.</param>
+    /// <returns>The created array.</returns>
+    public static Array GetArray(ComponentType type, int capacity)
+    {
+        return _createFactories.TryGetValue(type.Id, out Func<int, Array> func) ? func(capacity) : Array.CreateInstance(type.Type, capacity);
+    }
+
+    /// <summary>
+    ///     An array factory that creates arrays of the specified type.
+    /// </summary>
+    /// <typeparam name="T">The type of the array.</typeparam>
+    private static class ArrayFactory<T>
+    {
+        public static readonly Func<int, Array> Create = capacity => capacity == 0 ? Array.Empty<T>() : new T[capacity];
     }
 }
 
@@ -367,6 +410,9 @@ public static class Component
     /// <summary>
     ///     Searches a <see cref="ComponentType"/> by its <see cref="Type"/>. If it does not exist, it will be added.
     /// </summary>
+    /// <remarks>
+    ///     Not thread-safe; ensure no other threads are accessing or modifying the <see cref="ComponentRegistry"/>.
+    /// </remarks>
     /// <param name="type">The <see cref="Type"/>.</param>
     /// <returns>The <see cref="ComponentType"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -396,7 +442,7 @@ public static class Component
           }
 
           // Allocate the stack and set bits to replicate a bitset
-          var length = BitSet.RequiredLength(highestId);
+          var length = BitSet.RequiredLength(highestId + 1);
           Span<uint> stack = stackalloc uint[length];
           var spanBitSet = new SpanBitSet(stack);
 
@@ -409,17 +455,12 @@ public static class Component
           return GetHashCode(stack);
     }
 
-    /// <summary>
-    ///     Calculates the hash code of a bitset span, which is unique for the elements contained in the array.
-    ///     The order of the elements does not change the hashcode, so it depends on the elements themselves.
-    /// </summary>
-    /// <param name="obj">The <see cref="BitSet"/>.</param>
-    /// <returns>A unique hashcode for the contained elements, regardless of their order.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int GetHashCode(Span<uint> span)
     {
-        var bytes = MemoryMarshal.AsBytes(span);
-        return (int)MurmurHash3.Hash32(bytes, 0);
+        var hashCode = new HashCode();
+        hashCode.AddSpan(span);
+        return hashCode.ToHashCode();
     }
 }
 
@@ -473,7 +514,9 @@ public static class JobMeta<T> where T : class, new()
 // TODO: Based on the hash of each `Group` we can easily Map a `Group<T, T, T, ...>` to another `Group`.
 //       E.g.: `Group<int, byte>` to `Group<byte, int>`, as they return the same hash.
 /// <summary>
-///     The <see cref="Group"/> class counts the Ids of registered groups in an compiletime static way.
+///     The <see cref="Group"/> class counts the IDs of registered <see cref="ComponentType"/> groups in an compile-time static way,
+///     and stores an underlying array for dynamic access. In this way, its related classes (<see cref="Group{T0}"/>, <see cref="Group{T0, T1}"/>...)
+///     can be used to statically track sets of components from generic calls with zero overhead.
 /// </summary>
 public static class Group
 {
