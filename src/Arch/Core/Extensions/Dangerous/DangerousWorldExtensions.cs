@@ -20,8 +20,8 @@ public static class DangerousWorldExtensions
         world.Archetypes.AddRange(archetypes);
         foreach (var archetype in archetypes)
         {
-            world.Size += archetype.Entities;
-            world.Capacity += archetype.EntitiesPerChunk * archetype.Size;
+            world.Size += archetype.EntityCount;
+            world.Capacity += archetype.EntitiesPerChunk * archetype.ChunkCount;
         }
 
         world.ArchetypesAdded(archetypes.AsSpan());
