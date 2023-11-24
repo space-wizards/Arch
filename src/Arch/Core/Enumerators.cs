@@ -111,7 +111,7 @@ public ref struct QueryArchetypeEnumerator
         while (_archetypes.MoveNext())
         {
             var archetype = _archetypes.Current;
-            if (archetype.Entities > 0)
+            if (archetype.EntityCount > 0)
             {
                 return true;
             }
