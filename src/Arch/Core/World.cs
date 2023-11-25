@@ -374,7 +374,6 @@ public partial class World : IDisposable
         Capacity = 0;
 
         // Trim entity info and archetypes
-        EntityInfo.TrimExcess();
         for (var index = Archetypes.Count - 1; index >= 0; index--)
         {
             // Remove empty archetypes.
