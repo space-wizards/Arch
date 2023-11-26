@@ -183,8 +183,9 @@ public class ChunkIterationJob<T> : IJob where T : IChunkJob
     {
         for (var chunkIndex = 0; chunkIndex < Size; chunkIndex++)
         {
-            ref var currentChunk = ref Chunks[chunkIndex];
-            Instance?.Execute(Start + chunkIndex, ref currentChunk);
+            var index = Start + chunkIndex;
+            ref var currentChunk = ref Chunks[index];
+            Instance?.Execute(index, ref currentChunk);
         }
     }
 }
