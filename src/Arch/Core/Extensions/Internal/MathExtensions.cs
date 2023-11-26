@@ -11,7 +11,6 @@ internal static class MathExtensions
     /// </summary>
     /// <param name="num"></param>
     /// <returns></returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static int RoundToPowerOfTwo(int num)
     {
         // If num is a power of 2, return it

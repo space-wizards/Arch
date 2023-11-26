@@ -15,7 +15,6 @@ internal static class ComponentTypeExtensions
     /// </summary>
     /// <param name="types">The <see cref="ComponentType"/> array.</param>
     /// <returns>Their combined byte size.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static int ToByteSize(this ComponentType[] types)
     {
         var size = 0;
@@ -34,7 +33,6 @@ internal static class ComponentTypeExtensions
     /// </summary>
     /// <param name="types">The <see cref="ComponentType"/> array.</param>
     /// <returns>The lookup array.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static int[] ToLookupArray(this ComponentType[] types)
     {
         // Get maximum component ID.
