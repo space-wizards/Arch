@@ -181,11 +181,9 @@ public class ChunkIterationJob<T> : IJob where T : IChunkJob
     /// </summary>
     public void Execute()
     {
-        ref var chunk = ref Chunks.DangerousGetReferenceAt(Start);
-
         for (var chunkIndex = 0; chunkIndex < Size; chunkIndex++)
         {
-            ref var currentChunk = ref Unsafe.Add(ref chunk, chunkIndex);
+            ref var currentChunk = ref Chunks[chunkIndex];
             Instance?.Execute(Start + chunkIndex, ref currentChunk);
         }
     }
