@@ -223,7 +223,6 @@ public readonly partial struct Query : IEquatable<Query>
     /// </summary>
     /// <param name="bitset">The <see cref="BitSet"/> to compare with.</param>
     /// <returns>True if it matches, otherwhise false.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Valid(BitSet bitset)
     {
         return _isExclusive ? _exclusive.Exclusive(bitset) : _all.All(bitset) && _any.Any(bitset) && _none.None(bitset);
