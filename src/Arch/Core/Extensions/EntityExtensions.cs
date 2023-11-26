@@ -18,7 +18,6 @@ public static partial class EntityExtensions
     /// </summary>
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <returns>Its <see cref="Archetype"/>.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Pure]
     public static Archetype GetArchetype(this in Entity entity)
     {
@@ -31,7 +30,6 @@ public static partial class EntityExtensions
     /// </summary>
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <returns>A reference to its <see cref="Chunk"/>.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Pure]
     public static ref readonly Chunk GetChunk(this in Entity entity)
     {
@@ -44,7 +42,6 @@ public static partial class EntityExtensions
     /// </summary>
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <returns>Its <see cref="ComponentType"/>'s array.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Pure]
     public static ComponentType[] GetComponentTypes(this in Entity entity)
     {
@@ -58,7 +55,6 @@ public static partial class EntityExtensions
     /// </summary>
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <returns>A newly allocated array containing the entities components.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Pure]
     public static object?[] GetAllComponents(this in Entity entity)
     {
@@ -71,7 +67,6 @@ public static partial class EntityExtensions
     /// </summary>
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <returns>True if it exists and is alive, otherwhise false.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Pure]
     public static bool IsAlive(this in Entity entity)
     {
@@ -85,7 +80,6 @@ public static partial class EntityExtensions
     /// </summary>
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <returns>Its version.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Pure]
     public static int Version(this in Entity entity)
     {
@@ -98,7 +92,6 @@ public static partial class EntityExtensions
     /// </summary>
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <returns>Its <see cref="EntityReference"/>.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Pure]
     public static EntityReference Reference(this in Entity entity)
     {
@@ -112,7 +105,6 @@ public static partial class EntityExtensions
     /// <typeparam name="T">The component type.</typeparam>
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="component">The instance, optional.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Set<T>(this in Entity entity, in T? component = default)
     {
         var world = World.Worlds[entity.WorldId];
@@ -125,7 +117,6 @@ public static partial class EntityExtensions
     /// <typeparam name="T">The component type.</typeparam>
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <returns>True if it has the desired component, otherwhise false.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Pure]
     public static bool Has<T>(this in Entity entity)
     {
@@ -139,7 +130,6 @@ public static partial class EntityExtensions
     /// <typeparam name="T">The component type.</typeparam>
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <returns>A reference to the component.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Pure]
     public static ref T Get<T>(this in Entity entity)
     {
@@ -155,7 +145,6 @@ public static partial class EntityExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="component">The found component.</param>
     /// <returns>True if it exists, otherwhise false.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Pure]
     public static bool TryGet<T>(this in Entity entity, out T? component)
     {
@@ -170,7 +159,6 @@ public static partial class EntityExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="exists">True if it exists, oterhwhise false.</param>
     /// <returns>A reference to the component.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Pure]
     public static ref T TryGetRef<T>(this in Entity entity, out bool exists)
     {
@@ -185,7 +173,6 @@ public static partial class EntityExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="component">The component value used if its being added.</param>
     /// <returns>A reference to the component.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ref T AddOrGet<T>(this in Entity entity, T? component = default)
     {
         var world = World.Worlds[entity.WorldId];
@@ -198,7 +185,6 @@ public static partial class EntityExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="component">The component instance, optional.</param>
     /// <typeparam name="T">The component type.</typeparam>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Add<T>(this in Entity entity, in T? component = default)
     {
         var world = World.Worlds[entity.WorldId];
@@ -210,7 +196,6 @@ public static partial class EntityExtensions
     /// </summary>
     /// <typeparam name="T">The component type.</typeparam>
     /// <param name="entity">The <see cref="Entity"/>.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Remove<T>(this in Entity entity)
     {
         var world = World.Worlds[entity.WorldId];
@@ -229,7 +214,6 @@ public static partial class EntityExtensions
     /// </summary>
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="cmp">The component.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Set(this in Entity entity, object cmp)
     {
         var world = World.Worlds[entity.WorldId];
@@ -241,7 +225,6 @@ public static partial class EntityExtensions
     /// </summary>
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="components">The components <see cref="IList{T}"/>.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SetRange(this in Entity entity, params object[] components)
     {
         var world = World.Worlds[entity.WorldId];
@@ -254,7 +237,6 @@ public static partial class EntityExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="type">The component <see cref="ComponentType"/>.</param>
     /// <returns>True if it has the desired component, otherwhise false.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Pure]
     public static bool Has(this in Entity entity, ComponentType type)
     {
@@ -268,7 +250,6 @@ public static partial class EntityExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="types">The component <see cref="ComponentType"/>.</param>
     /// <returns>True if it has the desired component, otherwhise false.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Pure]
     public static bool HasRange(this in Entity entity, params ComponentType[] types)
     {
@@ -282,7 +263,6 @@ public static partial class EntityExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="type">The component <see cref="ComponentType"/>.</param>
     /// <returns>A reference to the component.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Pure]
     public static object? Get(this in Entity entity, ComponentType type)
     {
@@ -296,7 +276,6 @@ public static partial class EntityExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="types">The component <see cref="ComponentType"/>.</param>
     /// <returns>A reference to the component.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Pure]
     public static object?[] GetRange(this in Entity entity, params ComponentType[] types)
     {
@@ -312,7 +291,6 @@ public static partial class EntityExtensions
     /// <param name="types">The component <see cref="ComponentType"/>.</param>
     /// <param name="components">A <see cref="IList{T}"/> where the components are put it.</param>
     /// <returns>A reference to the component.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Pure]
     public static void GetRange(this in Entity entity, ComponentType[] types, IList<object?> components)
     {
@@ -328,7 +306,6 @@ public static partial class EntityExtensions
     /// <param name="type">The component <see cref="ComponentType"/>.</param>
     /// <param name="component">The found component.</param>
     /// <returns>True if it exists, otherwhise false.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Pure]
     public static bool TryGet(this in Entity entity, ComponentType type, out object? component)
     {
@@ -342,7 +319,6 @@ public static partial class EntityExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="cmp">The component.</param>
     [SkipLocalsInit]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Add(this in Entity entity, in object cmp)
     {
         var world = World.Worlds[entity.WorldId];
@@ -355,7 +331,6 @@ public static partial class EntityExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="components">The component <see cref="IList{T}"/>.</param>
     [SkipLocalsInit]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void AddRange(this in Entity entity, params object[] components)
     {
         var world = World.Worlds[entity.WorldId];
@@ -368,7 +343,6 @@ public static partial class EntityExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="components">A <see cref="IList{T}"/> of <see cref="ComponentType"/>'s, those are added to the <see cref="Entity"/>.</param>
     [SkipLocalsInit]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void AddRange(this in Entity entity, IList<ComponentType> components)
     {
         var world = World.Worlds[entity.WorldId];
@@ -381,7 +355,6 @@ public static partial class EntityExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="types">A <see cref="IList{T}"/> of <see cref="ComponentType"/>'s, those are removed from the <see cref="Entity"/>.</param>
     [SkipLocalsInit]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void RemoveRange(this in Entity entity, params ComponentType[] types)
     {
         var world = World.Worlds[entity.WorldId];
@@ -394,7 +367,6 @@ public static partial class EntityExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="types">A <see cref="IList{T}"/> of <see cref="ComponentType"/>'s, those are removed from the <see cref="Entity"/>.</param>
     [SkipLocalsInit]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void RemoveRange(this in Entity entity, IList<ComponentType> types)
     {
         var world = World.Worlds[entity.WorldId];

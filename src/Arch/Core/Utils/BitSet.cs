@@ -21,7 +21,6 @@ public class BitSet
     /// </summary>
     /// <param name="id">The id or bit.</param>
     /// <returns>A size of required <see cref="uint"/>s for the bitset.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int RequiredLength(int id)
     {
 #if NET7_0
@@ -69,8 +68,7 @@ public class BitSet
     /// </summary>
     public int HighestIndex
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _max;
+            get => _max;
     }
 
     /// <summary>
@@ -78,8 +76,7 @@ public class BitSet
     /// </summary>
     public int HighestBit
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _highestBit;
+            get => _highestBit;
     }
 
     /// <summary>
@@ -87,8 +84,7 @@ public class BitSet
     /// </summary>
     public int Length
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _bits.Length;
+            get => _bits.Length;
     }
 
     /// <summary>
@@ -96,7 +92,6 @@ public class BitSet
     /// </summary>
     /// <param name="index">The index.</param>
     /// <returns>True if it is, otherwhise false</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsSet(int index)
     {
         var b = index >> IndexSize;
@@ -113,7 +108,6 @@ public class BitSet
     ///     Resizes its internal array if necessary.
     /// </summary>
     /// <param name="index">The index.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetBit(int index)
     {
         var b = index >> IndexSize;
@@ -132,7 +126,6 @@ public class BitSet
     ///     Clears the bit at the given index.
     /// </summary>
     /// <param name="index">The index.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void ClearBit(int index)
     {
         var b = index >> IndexSize;
@@ -147,7 +140,6 @@ public class BitSet
     /// <summary>
     ///
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetAll()
     {
         var count = _bits.Length;
@@ -163,7 +155,6 @@ public class BitSet
     /// <summary>
     ///     Clears all set bits.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void ClearAll()
     {
         Array.Clear(_bits, 0, _bits.Length);
@@ -400,7 +391,6 @@ public class BitSet
     ///     Creates a <see cref="Span{T}"/> to access the <see cref="_bits"/>.
     /// </summary>
     /// <returns>The hash.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Span<uint> AsSpan()
     {
         var max = (_highestBit / sizeof(uint) / _padding) + 1;
@@ -413,7 +403,6 @@ public class BitSet
     /// <param name="span">The <see cref="Span{T}"/> to copy into.</param>
     /// <param name="zero">If true, it will zero the unused space from the <see cref="span"/>.</param>
     /// <returns>The <see cref="Span{T}"/>.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Span<uint> AsSpan(Span<uint> span, bool zero = true)
     {
         // Copy everything thats possible from one to another
@@ -436,7 +425,6 @@ public class BitSet
     ///     Creates a new <see cref="Enumerator{T}"/> that enumerates over this instance.
     /// </summary>
     /// <returns>A new <see cref="Enumerator{T}"/>.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Enumerator<uint> GetEnumerator()
     {
         return new Enumerator<uint>(AsSpan());
@@ -446,7 +434,6 @@ public class BitSet
     ///     Calculates the hash, this is unique for the set bits. Two <see cref="BitSet"/> with the same set bits, result in the same hash.
     /// </summary>
     /// <returns>The hash.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override int GetHashCode()
     {
         return Component.GetHashCode(AsSpan());
@@ -456,7 +443,6 @@ public class BitSet
     ///     Prints the content of this instance.
     /// </summary>
     /// <returns>The string.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override string ToString()
     {
         // Convert uint to binary form for pretty printing
@@ -500,7 +486,6 @@ public readonly ref struct SpanBitSet
     /// </summary>
     /// <param name="index">The index.</param>
     /// <returns>True if it is, otherwhise false</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsSet(int index)
     {
         var b = index >> ByteSize;
@@ -517,7 +502,6 @@ public readonly ref struct SpanBitSet
     ///     Resizes its internal array if necessary.
     /// </summary>
     /// <param name="index">The index.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetBit(int index)
     {
         var b = index >> ByteSize;
@@ -533,7 +517,6 @@ public readonly ref struct SpanBitSet
     ///     Clears the bit at the given index.
     /// </summary>
     /// <param name="index">The index.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void ClearBit(int index)
     {
         var b = index >> ByteSize;
@@ -548,7 +531,6 @@ public readonly ref struct SpanBitSet
     /// <summary>
     ///
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetAll()
     {
         var count = _bits.Length;
@@ -561,7 +543,6 @@ public readonly ref struct SpanBitSet
     /// <summary>
     ///     Clears all set bits.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void ClearAll()
     {
         _bits.Clear();
@@ -571,7 +552,6 @@ public readonly ref struct SpanBitSet
     ///     Creates a <see cref="Span{T}"/> to access the <see cref="_bits"/>.
     /// </summary>
     /// <returns>The hash.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Span<uint> AsSpan()
     {
         return _bits;
@@ -582,7 +562,6 @@ public readonly ref struct SpanBitSet
     /// </summary>
     /// <param name=""></param>
     /// <returns>The hash.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Span<uint> AsSpan(Span<uint> span, bool zero = true)
     {
         // Prevent exception because target array is to small for copy operation
@@ -605,7 +584,6 @@ public readonly ref struct SpanBitSet
     ///     Creates a new <see cref="Enumerator{T}"/> that enumerates over this instance.
     /// </summary>
     /// <returns>A new <see cref="Enumerator{T}"/>.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Enumerator<uint> GetEnumerator()
     {
         return new Enumerator<uint>(AsSpan());
@@ -615,7 +593,6 @@ public readonly ref struct SpanBitSet
     ///     Calculates the hash, this is unique for the set bits. Two <see cref="BitSet"/> with the same set bits, result in the same hash.
     /// </summary>
     /// <returns>The hash.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override int GetHashCode()
     {
         return Component.GetHashCode(AsSpan());
@@ -625,7 +602,6 @@ public readonly ref struct SpanBitSet
     ///     Prints the content of this instance.
     /// </summary>
     /// <returns>The string.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override string ToString()
     {
         // Convert uint to binary form for pretty printing

@@ -20,7 +20,6 @@ public static class WorldExtensions
     /// <param name="world">The <see cref="World"/>.</param>
     /// <param name="types">The component structure/<see cref="Archetype"/>.</param>
     /// <param name="amount">The amount.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Reserve(this World world, ComponentType[] types, int amount)
     {
         world.Reserve(types, amount);
@@ -32,7 +31,6 @@ public static class WorldExtensions
     /// <param name="world">The <see cref="World"/>.</param>
     /// <param name="queryDescription">The <see cref="QueryDescription"/> which specifies which components or <see cref="Entity"/>'s are searched for.</param>
     /// <param name="list">The <see cref="IList{T}"/> receiving the found <see cref="Entity"/>'s.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void GetEntities(this World world, in QueryDescription queryDescription, IList<Entity> list)
     {
         var query = world.Query(in queryDescription);
@@ -53,7 +51,6 @@ public static class WorldExtensions
     /// <param name="world">The <see cref="World"/>.</param>
     /// <param name="queryDescription">The <see cref="QueryDescription"/> which specifies which components are searched for.</param>
     /// <param name="archetypes">The <see cref="IList{T}"/> receiving <see cref="Archetype"/>'s containing <see cref="Entity"/>'s with the matching components.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void GetArchetypes(this World world, in QueryDescription queryDescription, IList<Archetype> archetypes)
     {
         var query = world.Query(in queryDescription);
@@ -69,7 +66,6 @@ public static class WorldExtensions
     /// <param name="world">The <see cref="World"/>.</param>
     /// <param name="queryDescription">The <see cref="QueryDescription"/> which specifies which components are searched for.</param>
     /// <param name="chunks">The <see cref="IList{T}"/> receiving <see cref="Chunk"/>'s containing <see cref="Entity"/>'s with the matching components.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void GetChunks(this World world, in QueryDescription queryDescription, IList<Chunk> chunks)
     {
         var query = world.Query(in queryDescription);
@@ -85,7 +81,6 @@ public static class WorldExtensions
     /// <param name="world">The <see cref="World"/>.</param>
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="components">The components <see cref="IList{T}"/>.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SetRange(this World world, Entity entity, params object[] components)
     {
         world.SetRange(entity, components);
@@ -98,7 +93,6 @@ public static class WorldExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="types">The component <see cref="ComponentType"/>.</param>
     /// <returns>True if it has the desired component, otherwhise false.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool HasRange(this World world, Entity entity, params ComponentType[] types)
     {
         return world.HasRange(entity, types);
@@ -111,7 +105,6 @@ public static class WorldExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="types">The component <see cref="ComponentType"/>.</param>
     /// <returns>A reference to the component.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static object?[] GetRange(this World world, Entity entity, params ComponentType[] types)
     {
         return world.GetRange(entity, types);
@@ -125,7 +118,6 @@ public static class WorldExtensions
     /// <param name="types">The component <see cref="ComponentType"/>.</param>
     /// <param name="components">A <see cref="IList{T}"/> where the components are put it.</param>
     /// <returns>A reference to the component.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void GetRange(this World world, Entity entity, ComponentType[] types, IList<object?> components)
     {
         var entitySlot = world.EntityInfo.GetEntitySlot(entity.Id);
@@ -146,7 +138,6 @@ public static class WorldExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="components">The component <see cref="IList{T}"/>.</param>
     [SkipLocalsInit]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void AddRange(this World world, Entity entity, params object[] components)
     {
         world.AddRange(entity, components);
@@ -162,7 +153,6 @@ public static class WorldExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="components">A <see cref="IList{T}"/> of <see cref="ComponentType"/>'s, those are added to the <see cref="Entity"/>.</param>
     [SkipLocalsInit]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [StructuralChange]
     public static void AddRange(this World world, Entity entity, IList<ComponentType> components)
     {
@@ -202,7 +192,6 @@ public static class WorldExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="components">A <see cref="IList{T}"/> of <see cref="ComponentType"/>'s, those are added to the <see cref="Entity"/>.</param>
     [SkipLocalsInit]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void AddRange(this World world, Entity entity, Span<ComponentType> components)
     {
         var oldArchetype = world.EntityInfo.GetArchetype(entity.Id);
@@ -245,7 +234,6 @@ public static class WorldExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="types">A <see cref="IList{T}"/> of <see cref="ComponentType"/>'s, those are removed from the <see cref="Entity"/>.</param>
     [SkipLocalsInit]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void RemoveRange(this World world, Entity entity, params ComponentType[] types)
     {
         world.RemoveRange(entity, types);
@@ -261,7 +249,6 @@ public static class WorldExtensions
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="types">A <see cref="IList{T}"/> of <see cref="ComponentType"/>'s, those are removed from the <see cref="Entity"/>.</param>
     [SkipLocalsInit]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [StructuralChange]
     public static void RemoveRange(this World world, Entity entity, IList<ComponentType> types)
     {

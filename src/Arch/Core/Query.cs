@@ -49,7 +49,6 @@ public partial struct QueryDescription : IEquatable<QueryDescription>
     /// <typeparam name="T">The generic type.</typeparam>
     /// <returns>The same <see cref="QueryDescription"/> instance for chained operations.</returns>
     [UnscopedRef]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ref QueryDescription WithAll<T>()
     {
         All = Group<T>.Types;
@@ -62,7 +61,6 @@ public partial struct QueryDescription : IEquatable<QueryDescription>
     /// <typeparam name="T">The generic type.</typeparam>
     /// <returns>The same <see cref="QueryDescription"/> instance for chained operations.</returns>
     [UnscopedRef]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ref QueryDescription WithAny<T>()
     {
         Any = Group<T>.Types;
@@ -75,7 +73,6 @@ public partial struct QueryDescription : IEquatable<QueryDescription>
     /// <typeparam name="T">The generic type.</typeparam>
     /// <returns>The same <see cref="QueryDescription"/> instance for chained operations.</returns>
     [UnscopedRef]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ref QueryDescription WithNone<T>()
     {
         None = Group<T>.Types;
@@ -89,7 +86,6 @@ public partial struct QueryDescription : IEquatable<QueryDescription>
     /// <typeparam name="T">The generic type.</typeparam>
     /// <returns>The same <see cref="QueryDescription"/> instance for chained operations.</returns>
     [UnscopedRef]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ref QueryDescription WithExclusive<T>()
     {
         Exclusive = Group<T>.Types;
@@ -232,7 +228,6 @@ public readonly partial struct Query : IEquatable<Query>
     ///     Returns an iterator to iterate over all <see cref="Archetype"/>'s containing <see cref="Entity"/>'s addressed by this <see cref="Query"/>.
     /// </summary>
     /// <returns>A new instance of the <see cref="QueryArchetypeIterator"/>.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public QueryArchetypeIterator GetArchetypeIterator()
     {
         return new QueryArchetypeIterator(this, Matches.Span);
@@ -242,7 +237,6 @@ public readonly partial struct Query : IEquatable<Query>
     ///     Returns an iterator to iterate over all <see cref="Chunk"/>'s containing <see cref="Entity"/>'s addressed by this <see cref="Query"/>.
     /// </summary>
     /// <returns>A new instance of the <see cref="QueryChunkIterator"/>.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public QueryChunkIterator GetChunkIterator()
     {
         return new QueryChunkIterator(this, Matches.Span);

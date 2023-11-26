@@ -137,7 +137,6 @@ public class CommandBuffer : IDisposable
     /// </summary>
     /// <param name="entity">The <see cref="Entity"/> to register.</param>
     /// <param name="info">Its <see cref="BufferedEntityInfo"/> which stores indexes used for <see cref="CommandBuffer"/> operations.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void Register(in Entity entity, out BufferedEntityInfo info)
     {
         var setIndex = Sets.Create(in entity);
@@ -151,15 +150,14 @@ public class CommandBuffer : IDisposable
         Size++;
     }
 
-    /// TODO : Probably just run this if the wrapped entity is negative? To save some overhead? 
+    /// TODO : Probably just run this if the wrapped entity is negative? To save some overhead?
     /// <summary>
     ///     Resolves an <see cref="Entity"/> originally either from a <see cref="StructuralSparseArray"/> or <see cref="SparseArray"/> to its real <see cref="Entity"/>.
-    ///     This is required since we can also create new entities via this buffer and buffer operations for it. So sometimes there negative entities stored in the arrays and those must then be resolved to its newly created real entity. 
+    ///     This is required since we can also create new entities via this buffer and buffer operations for it. So sometimes there negative entities stored in the arrays and those must then be resolved to its newly created real entity.
     ///     <remarks>Probably hard to understand, blame genaray for this.</remarks>
     /// </summary>
     /// <param name="entity">The <see cref="Entity"/> with a negative or positive id to resolve.</param>
     /// <returns>Its real <see cref="Entity"/>.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal Entity Resolve(Entity entity)
     {
         var entityIndex = BufferedEntityInfo[entity.Id].Index;
@@ -172,7 +170,6 @@ public class CommandBuffer : IDisposable
     /// </summary>
     /// <param name="types">The <see cref="Entity"/>'s component structure/<see cref="Archetype"/>.</param>
     /// <returns>The buffered <see cref="Entity"/> with an index of <c>-1</c>.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Entity Create(ComponentType[] types)
     {
         lock (this)
@@ -192,7 +189,6 @@ public class CommandBuffer : IDisposable
     ///     Will be destroyed during <see cref="Playback"/>.
     /// </summary>
     /// <param name="entity">The <see cref="Entity"/> to destroy.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Destroy(in Entity entity)
     {
         lock (this)
@@ -214,7 +210,6 @@ public class CommandBuffer : IDisposable
     /// <typeparam name="T">The component type.</typeparam>
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="component">The component value.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Set<T>(in Entity entity, in T? component = default)
     {
         BufferedEntityInfo info;
@@ -237,7 +232,6 @@ public class CommandBuffer : IDisposable
     /// <typeparam name="T">The component type.</typeparam>
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="component">The component value.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Add<T>(in Entity entity, in T? component = default)
     {
         BufferedEntityInfo info;
@@ -259,7 +253,6 @@ public class CommandBuffer : IDisposable
     /// </summary>
     /// <typeparam name="T">The component type.</typeparam>
     /// <param name="entity">The <see cref="Entity"/>.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Remove<T>(in Entity entity)
     {
         BufferedEntityInfo info;
@@ -281,7 +274,6 @@ public class CommandBuffer : IDisposable
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="components">A <see cref="IList{T}"/> of <see cref="ComponentType"/>'s, those are added to the <see cref="Entity"/>.</param>
     [SkipLocalsInit]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void AddRange(World world, Entity entity, IList<ComponentType> components)
     {
         var oldArchetype = world.EntityInfo.GetArchetype(entity.Id);
@@ -306,14 +298,13 @@ public class CommandBuffer : IDisposable
 
         world.Move(entity, oldArchetype, newArchetype, out _);
     }
-    
+
     /// <summary>
     ///     Plays back all recorded commands, modifying the world.
     /// </summary>
     /// <remarks>
     ///     This operation should only happen on the main thread.
     /// </remarks>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Playback()
     {
         // Create recorded entities.
@@ -344,8 +335,8 @@ public class CommandBuffer : IDisposable
             {
                 continue;
             }
-            
-            // Resolves the entity to get the real one (e.g. for newly created negative entities and stuff). 
+
+            // Resolves the entity to get the real one (e.g. for newly created negative entities and stuff).
             var entity = Resolve(wrappedEntity.Entity);
             Debug.Assert(World.IsAlive(entity), $"CommandBuffer can not to add components to the dead {wrappedEntity.Entity}");
 
@@ -360,7 +351,7 @@ public class CommandBuffer : IDisposable
             var wrappedEntity = Sets.Entities[index];
             var entity = Resolve(wrappedEntity.Entity);
             var id = wrappedEntity.Index;
-            
+
             Debug.Assert(World.IsAlive(entity), $"CommandBuffer can not to set components to the dead {wrappedEntity.Entity}");
 
             // Get entity chunk
@@ -417,7 +408,7 @@ public class CommandBuffer : IDisposable
             {
                 continue;
             }
-            
+
             var entity = Resolve(wrappedEntity.Entity);
             Debug.Assert(World.IsAlive(entity), $"CommandBuffer can not to remove components from the dead {wrappedEntity.Entity}");
 
