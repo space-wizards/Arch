@@ -69,27 +69,6 @@ public static class DangerousWorldExtensions
     }
 
     /// <summary>
-    ///     Returns the <see cref="EntityInfoStorage.EntitySlots"/> of a <see cref="World"/> for reading or modifiyng it.
-    /// </summary>
-    /// <param name="world">The <see cref="World"/> instance.</param>
-    /// <returns>Its <see cref="EntityInfoStorage.EntitySlots"/> array.</returns>
-    public static JaggedArray<(Archetype, (int,int))> GetSlots(this World world)
-    {
-        var array = world.EntityInfo.EntitySlots;
-        return Unsafe.As<JaggedArray<(Archetype, (int,int))>>(array);
-    }
-
-    /// <summary>
-    ///     Sets the <see cref="EntityInfoStorage.Slots"/> of a <see cref="World"/>.
-    /// </summary>
-    /// <param name="world">The <see cref="World"/> instance.</param>
-    /// <param name="slots">The new slots array.</param>
-    public static void SetSlots(this World world, JaggedArray<(Archetype, (int,int))> slots)
-    {
-        world.EntityInfo.EntitySlots = Unsafe.As<JaggedArray<EntitySlot>>(slots);
-    }
-
-    /// <summary>
     ///     Returns the <see cref="Slot"/> of an <see cref="Entity"/>.
     /// </summary>
     /// <param name="world">The <see cref="World"/>.</param>

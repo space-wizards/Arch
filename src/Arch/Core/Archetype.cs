@@ -387,7 +387,7 @@ public sealed partial class Archetype
 
             for (var index = upper; index >= lower; --index)
             {
-                ref var cmp = ref Unsafe.Add(ref firstElement, index);
+                ref var cmp = ref chunk.Get<T>(index);
                 cmp = component;
             }
         }
