@@ -373,8 +373,11 @@ public partial class World : IDisposable
     {
         Capacity = 0;
 
-        // Trim entity info and archetypes
-        EntityInfo.TrimExcess();
+        // Trim archetypes
+        // Upstream also trims EntityInfo HOWEVER this doesn't work correctly with pooled entity ids (AFAICT) as they
+        // may refer to indices that get removed.
+        // Additionally we can't just prune pooled entity ids because we need to make sure versions are intact
+        // or else we get duplicate entities which is MUCHO BAD.
         for (var index = Archetypes.Count - 1; index >= 0; index--)
         {
             // Remove empty archetypes.
