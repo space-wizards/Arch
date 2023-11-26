@@ -241,7 +241,7 @@ public partial struct Chunk
     {
         var id = Component<T>.ComponentType.Id;
         Debug.Assert(id != -1 && id < ComponentIdToArrayIndex.Length, $"Index is out of bounds, component {typeof(T)} with id {id} does not exist in this chunk.");
-        return ComponentIdToArrayIndex.DangerousGetReferenceAt(id);
+        return ComponentIdToArrayIndex[id];
     }
 
     /// <summary>
@@ -255,7 +255,7 @@ public partial struct Chunk
     {
         var index = Index<T>();
         Debug.Assert(index != -1 && index < Components.Length, $"Index is out of bounds, component {typeof(T)} with id {index} does not exist in this chunk.");
-        ref var array = ref Components.DangerousGetReferenceAt(index);
+        ref var array = ref Components[index];
         return Unsafe.As<T[]>(array);
     }
 
@@ -281,7 +281,7 @@ public partial struct Chunk
     [Pure]
     public ref T GetFirst<T>()
     {
-        return ref GetArray<T>().DangerousGetReference();
+        return ref GetArray<T>()[0];
     }
 }
 
@@ -316,7 +316,7 @@ public partial struct Chunk
             return false;
         }
 
-        return ComponentIdToArrayIndex.DangerousGetReferenceAt(id) != -1;
+        return ComponentIdToArrayIndex[id] != -1;
     }
 
     /// <summary>
@@ -348,7 +348,7 @@ public partial struct Chunk
             return -1;
         }
 
-        return ComponentIdToArrayIndex.DangerousGetReferenceAt(id);
+        return ComponentIdToArrayIndex[id];
     }
 
     /// <summary>
@@ -361,7 +361,7 @@ public partial struct Chunk
     public Array GetArray(ComponentType type)
     {
         var index = Index(type);
-        return Components.DangerousGetReferenceAt(index);
+        return Components[index];
     }
 }
 
