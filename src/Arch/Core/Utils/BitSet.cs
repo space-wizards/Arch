@@ -175,7 +175,6 @@ public class BitSet
     /// <param name="other">The other <see cref="BitSet"/>.</param>
     /// <returns>True if they match, false if not.</returns>
     [SkipLocalsInit]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool All(BitSet other)
     {
         var min = Math.Min(Math.Min(Length, other.Length), _max);
@@ -237,7 +236,6 @@ public class BitSet
     /// </summary>
     /// <param name="other">The other <see cref="BitSet"/>.</param>
     /// <returns>True if they match, false if not.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Any(BitSet other)
     {
         var min = Math.Min(Math.Min(Length, other.Length), _max);
@@ -299,7 +297,6 @@ public class BitSet
     /// </summary>
     /// <param name="other">The other <see cref="BitSet"/>.</param>
     /// <returns>True if none match, false if not.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool None(BitSet other)
     {
         var min = Math.Min(Math.Min(Length, other.Length), _max);
@@ -342,7 +339,6 @@ public class BitSet
     /// </summary>
     /// <param name="other">The other <see cref="BitSet"/>.</param>
     /// <returns>True if they match, false if not.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Exclusive(BitSet other)
     {
         var min = Math.Min(Math.Min(Length, other.Length), _max);
