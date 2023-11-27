@@ -10,7 +10,7 @@ namespace Arch.Core.Utils;
 ///     The <see cref="BitSet"/> class
 ///     represents a resizable collection of bits.
 /// </summary>
-public class BitSet
+public sealed class BitSet
 {
     private const int BitSize = (sizeof(uint) * 8) - 1;           // 31
     private const int IndexSize = 5;                              // log_2(BitSize + 1)
@@ -118,7 +118,7 @@ public class BitSet
 
         // Track highest set bit
         _highestBit = Math.Max(_highestBit, index);
-        _max = (_highestBit/sizeof(uint)/_padding)+1;
+        _max = (_highestBit/(BitSize+1))+1;
         _bits[b] |= 1u << (index & BitSize);
     }
 
@@ -149,7 +149,7 @@ public class BitSet
         }
 
         _highestBit = (_bits.Length * (BitSize + 1)) - 1;
-        _max = (_highestBit/sizeof(uint)/_padding)+1;
+        _max = (_highestBit/(BitSize+1))+1;
     }
 
     /// <summary>
