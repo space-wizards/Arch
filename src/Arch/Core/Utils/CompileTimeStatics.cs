@@ -133,7 +133,7 @@ public static class ComponentRegistry
     /// <param name="type">Its <see cref="Type"/>.</param>
     /// <param name="componentType">The <see cref="ComponentType"/>.</param>
     /// <returns>Its <see cref="ComponentType"/>.</returns>
-    public static ComponentType Add(Type type, ComponentType type)
+    public static ComponentType Add(Type type, ComponentType componentType)
     {
         // Register and assign component id
         _typeToComponentType.TryAdd(type, componentType);
