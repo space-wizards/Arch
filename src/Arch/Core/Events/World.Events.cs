@@ -392,10 +392,9 @@ public partial class World
         // Set the added component, start from the last slot and move down
         foreach (ref var chunk in archetype)
         {
-            ref var firstEntity = ref chunk.Entity(0);
             foreach (var index in chunk)
             {
-                var entity = Unsafe.Add(ref firstEntity, index);
+                ref var entity = ref chunk.Entity(index);
                 OnComponentAdded<T>(entity);
             }
         }
@@ -413,10 +412,9 @@ public partial class World
         // Set the added component, start from the last slot and move down
         foreach (ref var chunk in archetype)
         {
-            ref var firstEntity = ref chunk.Entity(0);
             foreach (var index in chunk)
             {
-                var entity = Unsafe.Add(ref firstEntity, index);
+                ref var entity = ref chunk.Entity(index);
                 OnComponentRemoved<T>(entity);
             }
         }

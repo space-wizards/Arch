@@ -113,7 +113,7 @@ public partial class World
             // Return jobs to pool.
             for (var jobIndex = 0; jobIndex < JobsCache.Count; jobIndex++)
             {
-                var job = Unsafe.As<ChunkIterationJob<T>>(JobsCache[jobIndex]);
+                var job = (ChunkIterationJob<T>) JobsCache[jobIndex];
                 pool.Return(job);
             }
 

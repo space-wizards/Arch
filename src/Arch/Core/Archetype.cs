@@ -376,7 +376,6 @@ public sealed partial class Archetype
         for (var chunkIndex = from.ChunkIndex; chunkIndex >= to.ChunkIndex; --chunkIndex)
         {
             ref var chunk = ref GetChunk(chunkIndex);
-            ref var firstElement = ref chunk.GetFirst<T>();
 
             // Only move within the range, depening on which chunk we are at.
             var isStart = chunkIndex == from.ChunkIndex;
@@ -387,7 +386,7 @@ public sealed partial class Archetype
 
             for (var index = upper; index >= lower; --index)
             {
-                ref var cmp = ref Unsafe.Add(ref firstElement, index);
+                ref var cmp = ref chunk.Get<T>(index);
                 cmp = component;
             }
         }

@@ -36,10 +36,9 @@ public static class WorldExtensions
         var query = world.Query(in queryDescription);
         foreach (ref var chunk in query)
         {
-            ref var entityFirstElement = ref chunk.Entity(0);
-            foreach (var entityIndex in chunk)
+            foreach (var index in chunk)
             {
-                var entity = Unsafe.Add(ref entityFirstElement, entityIndex);
+                ref var entity = ref chunk.Entity(index);
                 list.Add(entity);
             }
         }
@@ -217,7 +216,7 @@ public static class WorldExtensions
         world.Move(entity, oldArchetype, newArchetype, out _);
 
 #if EVENTS
-        for (var i = 0; i < components.Count; i++)
+        for (var i = 0; i < components.Length; i++)
         {
             world.OnComponentAdded(entity, components[i]);
         }

@@ -126,7 +126,7 @@ internal class SparseArray
     /// <returns>The array instance if it exists.</returns>
     private T[] GetArray<T>()
     {
-        return Unsafe.As<T[]>(Components);
+        return (T[]) Components;
     }
 
     // NOTE: If `SparseArray` were generic, this could perhaps be an indexer (T this[int index]).

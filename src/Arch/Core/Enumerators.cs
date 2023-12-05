@@ -60,7 +60,7 @@ public ref struct Enumerator<T>
     /// </summary>
     public readonly ref T Current
     {
-            get
+        get
         {
 
 #if NET7_0_OR_GREATER

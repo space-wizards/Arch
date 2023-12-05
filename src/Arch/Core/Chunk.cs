@@ -129,19 +129,6 @@ public partial struct Chunk
     }
 
     /// <summary>
-    ///     Returns a component at the index of the passed array.
-    /// </summary>
-    /// <typeparam name="T">The generic type.</typeparam>
-    /// <param name="first">The first element of the array.</param>
-    /// <param name="index">The index.</param>
-    /// <returns>A reference to the component.</returns>
-    [Pure]
-    public ref T Get<T>(ref T first, int index)
-    {
-        return ref Unsafe.Add(ref first, index);
-    }
-
-    /// <summary>
     ///     Returns a component and <see cref="Arch.Core.Entity"/> from an index within the <see cref="Chunk"/>.
     /// </summary>
     /// <typeparam name="T">The generic type.</typeparam>
@@ -243,7 +230,7 @@ public partial struct Chunk
         var index = Index<T>();
         Debug.Assert(index != -1 && index < Components.Length, $"Index is out of bounds, component {typeof(T)} with id {index} does not exist in this chunk.");
         ref var array = ref Components[index];
-        return Unsafe.As<T[]>(array);
+        return (T[]) array;
     }
 
 

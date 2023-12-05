@@ -86,10 +86,9 @@ public struct ForEachJob : IChunkJob
     /// <param name="chunk">A reference to the chunk which is currently processed.</param>
     public readonly void Execute(int index, ref Chunk chunk)
     {
-        ref var entityFirstElement = ref chunk.Entity(0);
-        foreach(var entityIndex in chunk)
+        foreach (var chunkIndex in chunk)
         {
-            var entity = Unsafe.Add(ref entityFirstElement, entityIndex);
+            ref var entity = ref chunk.Entity(chunkIndex);
             ForEach(entity);
         }
     }
@@ -116,10 +115,9 @@ public struct IForEachJob<T> : IChunkJob where T : IForEach
     /// <param name="chunk">A reference to the chunk which is currently processed.</param>
     public void Execute(int index, ref Chunk chunk)
     {
-        ref var entityFirstElement = ref chunk.Entity(0);
-        foreach(var entityIndex in chunk)
+        foreach (var chunkIndex in chunk)
         {
-            var entity = Unsafe.Add(ref entityFirstElement, entityIndex);
+            ref var entity = ref chunk.Entity(chunkIndex);
             ForEach.Update(entity);
         }
     }

@@ -466,10 +466,9 @@ public partial class World : IDisposable
         var query = Query(in queryDescription);
         foreach (ref var chunk in query)
         {
-            ref var entityFirstElement = ref chunk.Entity(0);
-            foreach (var entityIndex in chunk)
+            foreach (var chunkIndex in chunk)
             {
-                var entity = Unsafe.Add(ref entityFirstElement, entityIndex);
+                ref var entity = ref chunk.Entity(chunkIndex);
                 list[start + index] = entity;
                 index++;
             }
@@ -674,10 +673,9 @@ public partial class World
         var query = Query(in queryDescription);
         foreach (ref var chunk in query)
         {
-            ref var entityLastElement = ref chunk.Entity(0);
-            foreach (var entityIndex in chunk)
+            foreach (var index in chunk)
             {
-                var entity = Unsafe.Add(ref entityLastElement, entityIndex);
+                ref var entity = ref chunk.Entity(index);
                 forEntity(entity);
             }
         }
@@ -696,10 +694,9 @@ public partial class World
         var query = Query(in queryDescription);
         foreach (ref var chunk in query)
         {
-            ref var entityFirstElement = ref chunk.Entity(0);
-            foreach (var entityIndex in chunk)
+            foreach (var index in chunk)
             {
-                var entity = Unsafe.Add(ref entityFirstElement, entityIndex);
+                ref var entity = ref chunk.Entity(index);
                 t.Update(entity);
             }
         }
@@ -717,10 +714,9 @@ public partial class World
         var query = Query(in queryDescription);
         foreach (ref var chunk in query)
         {
-            ref var entityFirstElement = ref chunk.Entity(0);
-            foreach (var entityIndex in chunk)
+            foreach (var index in chunk)
             {
-                var entity = Unsafe.Add(ref entityFirstElement, entityIndex);
+                ref var entity = ref chunk.Entity(index);
                 iForEach.Update(entity);
             }
         }
@@ -751,10 +747,9 @@ public partial class World
             Size -= archetype.EntityCount;
             foreach (ref var chunk in archetype)
             {
-                ref var entityFirstElement = ref chunk.Entity(0);
-                foreach (var index in chunk)
+                for (var index = 0; index < chunk.Size; index++)
                 {
-                    var entity = Unsafe.Add(ref entityFirstElement, index);
+                    ref var entity = ref chunk.Entity(index);
                     OnEntityDestroyed(entity);
 
                     var version = EntityInfo.GetVersion(entity.Id);
@@ -782,10 +777,9 @@ public partial class World
         var query = Query(in queryDescription);
         foreach (ref var chunk in query)
         {
-            ref var componentFirstElement = ref chunk.GetFirst<T>();
             foreach (var index in chunk)
             {
-                ref var component = ref Unsafe.Add(ref componentFirstElement, index);
+                ref var component = ref chunk.Get<T>(index);
                 component = value;
 #if EVENTS
                 ref var entity = ref chunk.Entity(index);
