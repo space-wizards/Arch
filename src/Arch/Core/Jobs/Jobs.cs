@@ -1,6 +1,6 @@
 using CommunityToolkit.HighPerformance;
-using JobScheduler;
 using Microsoft.Extensions.ObjectPool;
+using Schedulers;
 
 namespace Arch.Core;
 
@@ -64,7 +64,7 @@ public readonly ref struct Range
 /// </summary>
 public interface IChunkJob
 {
-    public void Execute(int index, ref Chunk chunk);
+    public void Execute(ref Chunk chunk);
 }
 
 /// <summary>
@@ -82,9 +82,9 @@ public struct ForEachJob : IChunkJob
     /// <summary>
     ///     Called on each <see cref="Chunk"/> and iterates over all <see cref="Entity"/>'s to call the <see cref="ForEach"/> callback for each.
     /// </summary>
-    /// <param name="index">The chunk index.</param>
     /// <param name="chunk">A reference to the chunk which is currently processed.</param>
-    public readonly void Execute(int index, ref Chunk chunk)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public readonly void Execute(ref Chunk chunk)
     {
         ref var entityFirstElement = ref chunk.Entity(0);
         foreach(var entityIndex in chunk)
@@ -114,7 +114,8 @@ public struct IForEachJob<T> : IChunkJob where T : IForEach
     /// </summary>
     /// <param name="index">The chunk index.</param>
     /// <param name="chunk">A reference to the chunk which is currently processed.</param>
-    public void Execute(int index, ref Chunk chunk)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Execute(ref Chunk chunk)
     {
         ref var entityFirstElement = ref chunk.Entity(0);
         foreach(var entityIndex in chunk)
@@ -181,9 +182,8 @@ public sealed class ChunkIterationJob<T> : IJob where T : IChunkJob
     {
         for (var chunkIndex = 0; chunkIndex < Size; chunkIndex++)
         {
-            var index = Start + chunkIndex;
-            ref var currentChunk = ref Chunks[index];
-            Instance?.Execute(index, ref currentChunk);
+            ref var currentChunk = ref Unsafe.Add(ref chunk, chunkIndex);
+            Instance?.Execute(ref currentChunk);
         }
     }
 }

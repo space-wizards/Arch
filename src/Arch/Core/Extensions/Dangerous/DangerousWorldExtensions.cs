@@ -1,3 +1,4 @@
+using Arch.Core.Utils;
 using Arch.LowLevel.Jagged;
 using CommunityToolkit.HighPerformance;
 
@@ -18,8 +19,12 @@ public static class DangerousWorldExtensions
     public static void SetArchetypes(this World world, List<Archetype> archetypes)
     {
         world.Archetypes.AddRange(archetypes);
+
         foreach (var archetype in archetypes)
         {
+            var hash = Component.GetHashCode(archetype.Types);
+            world.GroupToArchetype[hash] = archetype;
+
             world.Size += archetype.EntityCount;
             world.Capacity += archetype.EntitiesPerChunk * archetype.ChunkCount;
         }
@@ -35,6 +40,36 @@ public static class DangerousWorldExtensions
     public static void EnsureCapacity(this World world, int capacity)
     {
         world.EntityInfo.EnsureCapacity(capacity);
+    }
+
+    /// <summary>
+    /// Gets the recycled entities for the world.
+    /// </summary>
+    /// <param name="world">The <see cref="World"/> instance.</param>
+    /// /// <returns>a tuple (id, version) list of the recycled entities.</returns>
+    public static List<(int, int)> GetRecycledEntityIds(this World world)
+    {
+        List<(int, int)> recycledIdsList = new();
+        foreach (RecycledEntity id in world.RecycledIds)
+        {
+            recycledIdsList.Add((id.Id, id.Version));
+        }
+
+        return recycledIdsList;
+    }
+
+    /// <summary>
+    /// Sets the recycled entities for the world.
+    /// </summary>
+    /// <param name="world">The <see cref="World"/> instance.</param>
+    /// <param name="recycledEntities">A tuple (id, version) list of recycled entites.</param>
+    public static void SetRecycledEntityIds(this World world, List<(int, int)> recycledEntities)
+    {
+        world.RecycledIds.Clear();
+        foreach ((int, int) recycledEntity in recycledEntities)
+        {
+            world.RecycledIds.Enqueue(new RecycledEntity(recycledEntity.Item1, recycledEntity.Item2));
+        }
     }
 
     /// <summary>
@@ -73,20 +108,28 @@ public static class DangerousWorldExtensions
     /// </summary>
     /// <param name="world">The <see cref="World"/> instance.</param>
     /// <returns>Its <see cref="EntityInfoStorage.EntitySlots"/> array.</returns>
-    public static JaggedArray<(Archetype, (int,int))> GetSlots(this World world)
+    public static JaggedArray<(Archetype, (int, int))> GetSlots(this World world)
     {
         var array = world.EntityInfo.EntitySlots;
-        return Unsafe.As<JaggedArray<(Archetype, (int,int))>>(array);
+        return Unsafe.As<JaggedArray<(Archetype, (int, int))>>(array);
     }
 
     /// <summary>
-    ///     Sets the <see cref="EntityInfoStorage.Slots"/> of a <see cref="World"/>.
+    ///     Sets the <see cref="EntityInfoStorage.EntitySlots"/> of a <see cref="World"/>.
     /// </summary>
     /// <param name="world">The <see cref="World"/> instance.</param>
     /// <param name="slots">The new slots array.</param>
-    public static void SetSlots(this World world, JaggedArray<(Archetype, (int,int))> slots)
+    public static void SetSlots(this World world, JaggedArray<(Archetype, (int, int))> slots)
     {
-        world.EntityInfo.EntitySlots = Unsafe.As<JaggedArray<EntitySlot>>(slots);
+        var convertedSlots = new JaggedArray<EntitySlot>(slots.Buckets, slots.Capacity);
+
+        for (int i = 0; i < slots.Capacity; i++)
+        {
+            var slot = slots[i];
+            convertedSlots[i] = new EntitySlot(slot.Item1, new Slot(slot.Item2.Item1, slot.Item2.Item2));
+        }
+
+        world.EntityInfo.EntitySlots = convertedSlots;
     }
 
     /// <summary>

@@ -1,8 +1,10 @@
 using Arch.Core;
 using Arch.Core.Extensions;
+using Arch.Core.Utils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using Schedulers;
 
 namespace Arch.Samples;
 
@@ -13,7 +15,7 @@ public sealed class Game : Microsoft.Xna.Framework.Game
 {
     // The world and a job scheduler for multithreading.
     private World _world;
-    private JobScheduler.JobScheduler _jobScheduler;
+    private JobScheduler _jobScheduler;
 
     // Our systems processing entities.
     private MovementSystem _movementSystem;
@@ -60,15 +62,26 @@ public sealed class Game : Microsoft.Xna.Framework.Game
     {
         base.BeginRun();
 
-        // Create world & systems
+        // Create world & Job Scheduler
         _world = World.Create();
-        _jobScheduler = new("SampleWorkerThreads");
+        _jobScheduler = new(
+                new JobScheduler.Config
+                {
+                    ThreadPrefixName = "Arch.Samples",
+                    ThreadCount = 0,
+                    MaxExpectedConcurrentJobs = 64,
+                    StrictAllocationMode = false,
+                }
+        );
+        World.SharedJobScheduler = _jobScheduler;
+
+        // Create systems
         _movementSystem = new MovementSystem(_world, GraphicsDevice.Viewport.Bounds);
         _colorSystem = new ColorSystem(_world);
         _drawSystem = new DrawSystem(_world, _spriteBatch);
 
         // Spawn in entities with position, velocity and sprite
-        for (var index = 0; index < 1002; index++)
+        for (var index = 0; index < 150_000; index++)
         {
             _world.Create(
                 new Position { Vec2 = _random.NextVector2(GraphicsDevice.Viewport.Bounds) },
